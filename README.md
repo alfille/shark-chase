@@ -23,9 +23,13 @@ So you need to be more clever!
 # Spoiler ahead
 ### Perhaps you will want to think it through first?
 ------------
+### [NEXT](README2.md)
 
-[Link to solution.](README2.md).
-
+[Puzzle posed](README.md)
+[Naive solution](README2.md) <- NEXT
+[Computing strategy](README3.md)
+[The program](README4.md)
+[Solution results](README5.md)
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)

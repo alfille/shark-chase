@@ -52,8 +52,14 @@ Let's have the man move in small descrete distances to the beach, changing his a
 
 # Optimization approach
 
-In the [next page](README4.md) we'll describe the actual algorithm
+------------
+### [NEXT](README4.md)
 
+[Puzzle posed](README.md)
+[Naive solution](README2.md)
+[Computing strategy](README3.md)
+[The program](README4.md) <- NEXT
+[Solution results](README5.md)
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)

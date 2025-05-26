@@ -36,8 +36,14 @@ Suppose you zig-zag away from the shark such that he keeps reversing his directi
 
 # Computed solutions
 
-The [next step](README3.md) is for more sophisticated methods.
+------------
+### [NEXT](README3.md)
 
+[Puzzle posed](README.md)
+[Naive solution](README2.md)
+[Computing strategy](README3.md) <- NEXT
+[The program](README4.md)
+[Solution results](README5.md)
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)
