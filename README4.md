@@ -16,7 +16,7 @@ You're lazy. What's the shortest distance you need to run to get there?
 
 We will use [Simulated Annealing](https://en.wikipedia.org/wiki/Simulated_annealing) as the optimization algorithm. It's a way to search a potentially large solution space and converge on an optimal solution.
 
-In theory it can explore beyond local minima to find better solutions.
+It is designed to explore beyond local minima to find better solutions.
 
 ## Tools
 
@@ -27,11 +27,11 @@ In theory it can explore beyond local minima to find better solutions.
 * [Gnuplot](http://gnuplot.info/) for visulizing the solutions
 
 ## Setup
-The code:
+Get the program:
 
 `git clone https://github.com/alfille/shark-chase`
 
-To install in linux (Debian or Ubuntu):
+Install prerequisites in linux (Debian or Ubuntu):
 
 `sudo apt install libgsl-dev gnuplot`
 
