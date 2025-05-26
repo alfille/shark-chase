@@ -31,15 +31,16 @@ int PATH_POINTS = 100 ;
 int verbose = 0 ;
 
 /* Simulated Annealing Parameters */
-#define N_TRIES 10000 // points before stepping
-#define ITERS_FIXED_T 10000 // points at temperature
-#define K 1.0 // Boltzman const
-#define T_INITIAL 0.008 // man_pos temp
-#define MU_T 1.003 // damping factor
-#define T_MIN 2.0e-6
+int N_TRIES= 10000 ; // points before stepping
+int ITERS_FIXED_T = 10000;  // points at temperature
+double K = 1.0; // Boltzman const
+double T_INITIAL = 0.008 ; // initial temperature
+double MU_T = 1.003 ; // damping factor
+double T_MIN = 2.0e-6 ; // final temperature
+double STEP_MULTIPLIER = 1.0 ; // multiplier for pertubation
 
 /* Shark params */
-#define SHARK_V 4.0 // relative speed
+double SHARK_V = 4.0 ; // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
 double  * shark_pos ;
 
@@ -142,7 +143,7 @@ int pass( gsl_rng * rng ) {
     gsl_siman_params_t params = {
         N_TRIES, 
         ITERS_FIXED_T, 
-        M_PI / PATH_POINTS , // step size
+        STEP_MULTIPLIER * M_PI / PATH_POINTS , // step size
         K, 
         T_INITIAL, 
         MU_T, 
@@ -244,17 +245,35 @@ void help() {
     printf("shark [options]\n");
     printf("\n");
     printf("Options\n");
-    printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);
+    printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
+    printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);    
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
+    printf("\n");
+    printf("Obscure options\n");
+    printf("\t-n%d\t--ntries\tPoints before stepping (default %d)\n",N_TRIES,N_TRIES);
+    printf("\t-i%d\t--iterations\tIterations at each temperature (default %d)\n",ITERS_FIXED_T,ITERS_FIXED_T);
+    printf("\t-m%g\t--multiplier\tMultiplier for pertubation (default %g)\n",STEP_MULTIPLIER,STEP_MULTIPLIER);
+    printf("\t-K%g\t--boltzman\tBoltzman constant (default %g)\n",K,K);
+    printf("\t-u%g\t--mu\t\tTemperature damping factor (default %g)\n",MU_T,MU_T);
+    printf("\t-t%g\t--temperature\tInitial temperature (default %g)\n",T_INITIAL,T_INITIAL);
+    printf("\t-x%g\t--final\t\tFinal temperature (default %g)\n",T_MIN,T_MIN);
     exit(1);
 }
 
 struct option long_options[] =
 {
     {"path"   ,   required_argument, 0, 'p'},
+    {"sped"   ,   required_argument, 0, 's'},
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
+    {"ntries" ,   required_argument, 0, 'n'},
+    {"iterations" ,   required_argument, 0, 'i'},
+    {"multiplier" ,   required_argument, 0, 'm'},
+    {"boltzman",   required_argument, 0, 'K'},
+    {"mu"      ,   required_argument, 0, 'u'},
+    {"temperature" ,   required_argument, 0, 't'},
+    {"final"      ,   required_argument, 0, 'x'},
     {0        ,   0          ,       0,   0}
 };
 
@@ -262,19 +281,43 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:vh", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:vhn:i:m:K:u:t:x:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
                 break ;
-            case 'h':
-                help();
-                break ;
             case 'p':
                 PATH_POINTS = (int) atoi(optarg);
                 break ;
+            case 's':
+                SHARK_V = (double) atof(optarg);
+                break ;
             case 'v':
                 verbose = 1 ;
+                break ;
+            case 'h':
+                help();
+                break ;
+            case 'n':
+                N_TRIES = (int) atoi(optarg);
+                break ;
+            case 'i':
+                ITERS_FIXED_T = (int) atoi(optarg);
+                break ;
+            case 'm':
+                STEP_MULTIPLIER = (double) atof(optarg) ;
+                break ;
+            case 'K':
+                K = (double) atof(optarg) ;
+                break ;
+            case 'u':
+                MU_T = (double) atof(optarg) ;
+                break ;
+            case 't':
+                T_INITIAL = (double) atof(optarg) ;
+                break ;
+            case 'x':
+                T_MIN = (double) atof(optarg) ;
                 break ;
             default:
                 help() ;
