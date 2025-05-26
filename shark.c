@@ -1,47 +1,66 @@
+/* shark-chase
+ * find optimal path to escape a shark
+ * see https://github.com/alfille/shark-chase
+ * 
+ * Paul H Alfille 2025
+ * MIT license
+ * */
+
 /* Shark from DSK */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <getopt.h>
 #include <math.h>
 
+/* Gnu Scientific Library for Simulated Annealing and Random */
 #include <gsl/gsl_siman.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_sf_trig.h>
 
-#define PATH_POINTS 1000
+/* Also uses Gnuplot for visulaization */
 
+/* Compile:
+ * gcc -o shark shark.c -lgsl -lm
+ * */
+
+// Number of points (plus 1 for endpoints) */
+int PATH_POINTS = 100 ;
+
+int verbose = 0 ;
+
+/* Simulated Annealing Parameters */
 #define N_TRIES 10000 // points before stepping
-
 #define ITERS_FIXED_T 10000 // points at temperature
-
 #define K 1.0 // Boltzman const
-#define T_INITIAL 0.008 // initial temp
+#define T_INITIAL 0.008 // man_pos temp
 #define MU_T 1.003 // damping factor
 #define T_MIN 2.0e-6
 
+/* Shark params */
 #define SHARK_V 4.0 // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
-double  shark_pos[PATH_POINTS+1] ;
+double  * shark_pos ;
 
 // man's position
 struct point {
     double angle ;
     double r ;
-} * initial ;
+} * man_pos ;
 
-// initial array -- straight run to the beach
+// man_pos array -- straight run to the beach
 void initial_setup( void ) {
-    initial = (struct point *) calloc( PATH_POINTS + 1, sizeof( struct point ) ) ; 
+    man_pos = (struct point *) calloc( PATH_POINTS + 1, sizeof( struct point ) ) ; 
+    shark_pos = (double *) calloc( PATH_POINTS + 1, sizeof(double) ) ;
     for ( int i=0 ; i<=PATH_POINTS ; ++i ) {
-        initial[i].r = (double) i / PATH_POINTS ;
-        initial[i].angle = 0 ;
+        man_pos[i].r = (double) i / PATH_POINTS ;
+        man_pos[i].angle = 0 ;
     }
 }
 
 // Calculate the run
 // return length, update shark_pos and update penalty
-
 double Calculation( void * xp, double * penalty ) {
     struct point * path = xp ;
 
@@ -132,11 +151,11 @@ int pass( gsl_rng * rng ) {
     
     gsl_siman_solve(
         rng , // gsl_rng *
-        initial, // array
+        man_pos, // array
         Energy, // energy function
         Step, // step function
         Metric, // metric function
-        NULL, //Print, // print position
+        verbose ? Print : NULL, //Print, // print position
         NULL, // copy
         NULL, // constructor
         NULL, // destructor
@@ -148,9 +167,7 @@ int pass( gsl_rng * rng ) {
 // For printing
 #define SHARK_RADIUS 1.5
 
-void Graph( void * xp ) {
-    struct point * path = xp ;
-        
+void Graph(void) {
     char file_control[120] ;
     sprintf( file_control, "control%d.gplot", PATH_POINTS ) ;
     FILE * fcontrol = fopen( file_control, "w" ) ;
@@ -188,10 +205,10 @@ void Graph( void * xp ) {
 
     /* Calculate of results */
     double penalty ;
-    double length = Calculation( initial, &penalty ) ;
+    double length = Calculation( man_pos, &penalty ) ;
     
     printf( "Calculation with %d points:\n", PATH_POINTS );
-    printf( "\t%f\tTotal angle turned by man (degrees)\n",(initial[PATH_POINTS].angle-0)*180/M_PI );
+    printf( "\t%f\tTotal angle turned by man (degrees)\n",(man_pos[PATH_POINTS].angle-0)*180/M_PI );
     printf( "\t%f\tTotal angle turned by shark (degrees)\n",(shark_pos[PATH_POINTS]-SHARK_INIT_ANGLE)*180/M_PI );
     printf( "\t%f\tTotal length of man's run\n",length );
     printf( "\t%f\tpenalty for shark bite\n", penalty );
@@ -200,7 +217,7 @@ void Graph( void * xp ) {
     // man
     fprintf( fdata, "Man\n" ) ;
     for( int i = 0 ; i <= PATH_POINTS ; ++i ) {
-        fprintf( fdata, "%g %g\n", path[i].angle, path[i].r ) ;
+        fprintf( fdata, "%g %g\n", man_pos[i].angle, man_pos[i].r ) ;
     }
     
     fprintf( fdata, "\n\n" ) ; // separator
@@ -218,8 +235,64 @@ void Graph( void * xp ) {
     system(system_command);
 }
 
+void help() {
+    printf("shark-chase\n");
+    printf("\tfind fastest way to beach avoiding shark\n");
+    printf("\tby Paul H Alfille 2023 -- MIT Licence\n");
+    printf("\tSee https://github.com/alfille/shark-chase\n");
+    printf("\n");
+    printf("shark [options]\n");
+    printf("\n");
+    printf("Options\n");
+    printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);
+    printf("\t-v\t--verbose\tshow progress during search\n");
+    printf("\t-h\t--help\t\tthis help\n");
+    exit(1);
+}
 
-void main( void ) {
+struct option long_options[] =
+{
+    {"path"   ,   required_argument, 0, 'p'},
+    {"verbose",   no_argument,       0, 'v'},
+    {"help"   ,   no_argument,       0, 'h'},
+    {0        ,   0          ,       0,   0}
+};
+
+void ParseCommandLine( int argc, char * argv[] ) {
+    // Parse command line
+    int c;
+    int option_index ;
+    while ( (c = getopt_long( argc, argv, "p:vh", long_options, &option_index )) != -1 ) {
+        //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
+        switch (c) {
+            case 0:
+                break ;
+            case 'h':
+                help();
+                break ;
+            case 'p':
+                PATH_POINTS = (int) atoi(optarg);
+                break ;
+            case 'v':
+                verbose = 1 ;
+                break ;
+            default:
+                help() ;
+                break ;
+            }
+    }
+        
+    // test parameters
+    if ( PATH_POINTS < 10 ) {
+        PATH_POINTS = 10 ;
+    }
+    if ( PATH_POINTS > 1000000 ) {
+        PATH_POINTS = 1000000 ;
+    }
+}   
+
+int main( int argc, char ** argv ) {
+    ParseCommandLine( argc, argv ) ;
     
     // random generator
     const gsl_rng_type * T ;
@@ -230,8 +303,11 @@ void main( void ) {
     
     initial_setup() ;
     printf( "Data points: %i\n",PATH_POINTS ) ;
+    if ( verbose==0 ) {
+        printf("\tcalculating -- may take a while\n");
+    }
     pass(rng) ;
-    Graph( initial ) ;
-
+    Graph() ;
+    
+    return 0 ;
 }
-

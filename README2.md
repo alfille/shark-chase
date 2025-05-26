@@ -36,5 +36,5 @@ Suppose you zig-zag away from the shark such that he keeps reversing his directi
 
 # Computed solutions
 
-The [next step](README3.md) is for more sphisticated methods.
+The [next step](README3.md) is for more sophisticated methods.
 

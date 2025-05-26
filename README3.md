@@ -1,4 +1,4 @@
-# shark-chase (calculated)
+# shark-chase (computed)
 Puzzle: Can you get to the beach before the shark gets there? 
 
 ## Puzzle
@@ -46,9 +46,9 @@ Let's have the man move in small descrete distances to the beach, changing his a
    * We want it to be worse for losing earlier
    * It's a *death tax*!
 * Penalty
-   * Beyond 1/4 radius, the shark can't be at the same angle as you
-   * We'll add a multiple of the total distance the shark is lying in wait to the penalty
-   * Add even more if he's there at the end
+   * Beyond 1/4 radius, the shark shouldn't lying in wait at the same angle as you
+   * We'll add a multiple of the total distance you run while the shark is lying in wait
+   * Add even more for the bite at the end
 
 # Optimization approach
 
