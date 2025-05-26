@@ -12,7 +12,7 @@ Puzzle: Can you get to the beach before the shark gets there?
 Can you get to the beach before he gets there?
 You're lazy. What's the shortest distance you need to run to get there?
 
-# Calculated Solution
+# Computed Solution
 
 ## Theoretic
 
@@ -44,13 +44,12 @@ Let's have the man move in small descrete distances to the beach, changing his a
 * To find a satisfactory penalty for losing
    * We want it to be large
    * We want it to be worse for losing earlier
+   * It's a *death tax*!
 * Penalty
    * Beyond 1/4 radius, the shark can't be at the same angle as you
    * We'll add a multiple of the total distance the shark is lying in wait to the penalty
    * Add even more if he's there at the end
 
-### 
+# Optimization approach
 
-### Code design
-
-### Run it
+In the [next page](README4.md) we'll describe the actual algorithm

@@ -21,7 +21,7 @@ So you need to be more clever!
 
 ------
 # Spoiler ahead
-## Perhaps you will want to think it through?
+### Perhaps you will want to think it through first?
 ------------
 
 [Link to solution.](README2.md).
