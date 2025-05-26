@@ -6,7 +6,7 @@ Puzzle: Can you get to the beach before the shark gets there?
 ![picture](picture.png)
 
 * You are on a circular island.
-* There is a smart hungery shark that can swim 4 times faster than you can run. 
+* There is a smart hungry shark that can swim 4 times faster than you can run. 
 * You can see his position (and he can see yours).
 
 Can you get to the beach before he gets there?
@@ -61,4 +61,8 @@ Commnnication with the external plotting program is with 2 files that are create
 # Results
 
 See [next page](README5.md) for results
+
+-----------
+by Paul H Alfille 2025
+[on Github](https://github.com/alfille/shark-chase)
 

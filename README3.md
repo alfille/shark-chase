@@ -6,7 +6,7 @@ Puzzle: Can you get to the beach before the shark gets there?
 ![picture](picture.png)
 
 * You are on a circular island.
-* There is a smart hungery shark that can swim 4 times faster than you can run. 
+* There is a smart hungry shark that can swim 4 times faster than you can run. 
 * You can see his position (and he can see yours).
 
 Can you get to the beach before he gets there?
@@ -31,7 +31,7 @@ Let's have the man move in small descrete distances to the beach, changing his a
 * _Man_ moves in increment in radius each step
 * _Man_ changes (maybe) angle each step
 * _Shark_ moves to decrease difference in angle each step
-* _Shark can move up to 4 times the distance the _Man_ moved
+* _Shark_ can move up to 4 times the distance the _Man_ moved
 
 ### Goal
 * Minumum distance run without being eaten
@@ -46,10 +46,14 @@ Let's have the man move in small descrete distances to the beach, changing his a
    * We want it to be worse for losing earlier
    * It's a *death tax*!
 * Penalty
-   * Beyond 1/4 radius, the shark shouldn't lying in wait at the same angle as you
+   * Beyond 1/4 radius, the shark shouldn't be lying in wait at the same angle as you
    * We'll add a multiple of the total distance you run while the shark is lying in wait
    * Add even more for the bite at the end
 
 # Optimization approach
 
 In the [next page](README4.md) we'll describe the actual algorithm
+
+-----------
+by Paul H Alfille 2025
+[on Github](https://github.com/alfille/shark-chase)
