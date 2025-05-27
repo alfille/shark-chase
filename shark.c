@@ -200,7 +200,7 @@ void Graph(void) {
     fprintf( fcontrol, "set rtics (\"%.2f\" %.2f,\"%.2f\" %.2f 1,\"%.2f\" %.2f)\n",1./SHARK_V,1./SHARK_V,.5,.5,1.,1. ) ;
     fprintf( fcontrol, "set key autotitle columnheader\n" );
     fprintf( fcontrol, "plot for [i=0:1] \'%s\' using 1:2 index i with lines\n", file_data ) ;
-    fprintf( fcontrol, "pause mouse\n" ) ;
+//    fprintf( fcontrol, "pause mouse\n" ) ;
     
     fclose( fcontrol ) ;
 
@@ -232,7 +232,8 @@ void Graph(void) {
     fclose( fdata ) ;
 
     char system_command[250] ;
-    sprintf( system_command, "gnuplot %s", file_control ); 
+    sprintf( system_command, "gnuplot -p %s", file_control ); 
+    
     system(system_command);
 }
 
