@@ -65,11 +65,11 @@ Commnnication with the external plotting program is with 2 files that are create
 ------------
 ### [NEXT](README5.md)
 
-[Puzzle posed](README.md)
-[Naive solution](README2.md)
-[Computing strategy](README3.md)
-[The program](README4.md)
-[Solution results](README5.md) <- NEXT
+* [Puzzle posed](README.md)
+* [Naive solution](README2.md)
+* [Computing strategy](README3.md)
+* [The program](README4.md)
+* [Solution results](README5.md) <- NEXT
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)

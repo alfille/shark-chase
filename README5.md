@@ -29,11 +29,12 @@ You're lazy. What's the shortest distance you need to run to get there?
 
 ------------
 ### Table of Contents
-[Puzzle posed](README.md)
-[Naive solution](README2.md)
-[Computing strategy](README3.md)
-[The program](README4.md) <- NEXT
-[Solution results](README5.md)
+
+* [Puzzle posed](README.md)
+* [Naive solution](README2.md)
+* [Computing strategy](README3.md)
+* [The program](README4.md) <- NEXT
+* [Solution results](README5.md)
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)
