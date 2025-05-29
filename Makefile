@@ -1,5 +1,5 @@
 TARGET = shark
-LLIBS = -lgsl -lm
+LIBS = -lgsl -lm
 CC = gcc
 CFLAGS = -g -Wall
 

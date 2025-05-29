@@ -135,11 +135,11 @@ void Step( const gsl_rng * rng, void * xp, double step_size ) {
 void Print( void * xp ) {
     struct point * path = xp ;
     for ( int i=0 ; i<=PATH_POINTS ; ++i ) {
-        //printf( "%d: r=%g, a=%g\n", i, path[i].r, path[i].angle ) ;
+		printf( "%d: r=%g, a=%g\n", i, path[i].r, path[i].angle ) ;
     }
 }
 
-int pass( gsl_rng * rng ) {
+void pass( gsl_rng * rng ) {
     gsl_siman_params_t params = {
         N_TRIES, 
         ITERS_FIXED_T, 
