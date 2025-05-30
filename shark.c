@@ -50,8 +50,12 @@ struct point {
     double r ;
 } * man_pos ;
 
+
+// for file names
+char * add_text = NULL ;
+
 // man_pos array -- straight run to the beach
-void initial_setup( void ) {
+void initial_path( void ) {
     man_pos = (struct point *) calloc( PATH_POINTS + 1, sizeof( struct point ) ) ; 
     shark_pos = (double *) calloc( PATH_POINTS + 1, sizeof(double) ) ;
     for ( int i=0 ; i<=PATH_POINTS ; ++i ) {
@@ -170,7 +174,11 @@ void pass( gsl_rng * rng ) {
 
 void Graph(void) {
     char file_control[120] ;
-    sprintf( file_control, "control%d.gplot", PATH_POINTS ) ;
+    if ( add_text ) {
+		sprintf( file_control, "control%d_%s.gplot", PATH_POINTS, add_text ) ;
+	} else {
+		sprintf( file_control, "control%d.gplot", PATH_POINTS ) ;
+	}
     FILE * fcontrol = fopen( file_control, "w" ) ;
     if ( fcontrol == NULL ) {
         fprintf( stderr , "Cannot open file %s\n", file_control ) ;
@@ -178,7 +186,11 @@ void Graph(void) {
     }
     
     char file_data[120];
-    sprintf( file_data,    "data%d.dat",      PATH_POINTS ) ;
+    if ( add_text ) {
+		sprintf( file_data,    "data%d_%s.dat",      PATH_POINTS, add_text ) ;
+	} else {
+		sprintf( file_data,    "data%d.dat",      PATH_POINTS ) ;
+	}
     FILE * fdata = fopen( file_data, "w" ) ;
     if ( fdata == NULL ) {
         fprintf( stderr , "Cannot open file %s\n", file_data ) ;
@@ -247,7 +259,8 @@ void help() {
     printf("\n");
     printf("Options\n");
     printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
-    printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);    
+    printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
+    printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
@@ -265,7 +278,8 @@ void help() {
 struct option long_options[] =
 {
     {"path"   ,   required_argument, 0, 'p'},
-    {"sped"   ,   required_argument, 0, 's'},
+    {"speed"  ,   required_argument, 0, 's'},
+	{"add"    ,   required_argument, 0, 'a'},
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
     {"ntries" ,   required_argument, 0, 'n'},
@@ -282,7 +296,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:vhn:i:m:K:u:t:x:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:vhn:i:m:K:u:t:x:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -293,6 +307,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
             case 's':
                 SHARK_V = (double) atof(optarg);
                 break ;
+            case 'a':
+				add_text = (char *) optarg ;
+				break ;
             case 'v':
                 verbose = 1 ;
                 break ;
@@ -345,7 +362,7 @@ int main( int argc, char ** argv ) {
     T = gsl_rng_default ;
     rng = gsl_rng_alloc( T ) ;
     
-    initial_setup() ;
+    initial_path() ;
     printf( "Data points: %i\n",PATH_POINTS ) ;
     if ( verbose==0 ) {
         printf("\tcalculating -- may take a while\n");
