@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 
-# dat2csv
-# read a "dat" file (formatted for gnuplot" and write out as CSV
-# Different series are side by side
+# shark.py
+# read a "dat" file (formatted for gnuplot" and show summary statistics
 
 import tkinter as tk
 from tkinter import filedialog
@@ -59,6 +58,9 @@ def CSVwrite( dat_data ):
 	with open( CSVfile, "w" ) as f:
 		f.write(join_series(dat_data))
 
+def series_info( dat_data ): 
+	print( dat_data ) 
+
 def main( sysargs ):
 	if len(sysargs) > 1:
 		dat_data = dat_slurp(sysargs[1])
@@ -67,7 +69,7 @@ def main( sysargs ):
 
 	dat_data = [ series_parse( column ) for column in dat_data.split( "\n\n\n" ) ]
 	
-	CSVwrite( dat_data ) 
+	series_info( dat_data )
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
