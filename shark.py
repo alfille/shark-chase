@@ -7,31 +7,36 @@ import tkinter as tk
 from tkinter import filedialog
 
 import sys
+import math
 import io
-from pathlib import Path
 
-CSVfile = "dummy.csv"
+class Series:
+	def __init__( self, series ):
+		lines = series.strip().split("\n")
+		self.title = lines[0] 
+		self.t = [ float((xx.split())[0]) for xx in lines[1:] ]
+		self.r = [ float((xx.split())[1]) for xx in lines[1:] ]
 
-def vformat(vals) :
-	match len(vals):
-		case 0:
-			return "\"\",\"\""
-		case 1:
-			return "\"{}_x\",\"{}_y\"".format(vals[0],vals[0])
-		case 2:
-			return "{},{}".format(vals[0],vals[1])
+	def info( self ) :
+		print( "Series: {}".format(self.title) )
+		print( "\tData points: {}".format( len(self.t) ) )
+		print( "\tColumn 1 range {} to {}".format(min(self.t),max(self.t) ) )
+		print( "\tColumn 2 range {} to {}".format(min(self.r),max(self.r) ) )
+		
+	def calc_path( self ):
+		self.segments = [ math.sqrt( self.r[i]**2 + self.r[i-1]**2 - 2*self.r[i]*self.r[i-1]*math.cos(self.t[i]-self.t[i-1])  ) for i in range(1,len(self.t)) ]
+		print( math.fsum( self.segments ) )
 
 def dat_slurp(dat_name=""):
 	# Possibly request file (if not specified on command line) and read it in
-	global CSVfile
 	
 	if dat_name == "":
 		# Use Tk file dialog
 		root = tk.Tk()
 		root.withdraw()
 		dat_name = filedialog.askopenfilename(title="Enter the DAT file to parse:",filetypes=(
-			("DAT files","*.DAT"),
 			("dat files","*.dat"),
+			("DAT files","*.DAT"),
 			("Text file","*.txt"),
 			("Text file","*.TXT"),
 			("All files","*"),
@@ -39,8 +44,6 @@ def dat_slurp(dat_name=""):
 			)
 		root.destroy()
 
-	CSVfile = Path(dat_name).with_suffix(".csv")
-	
 	try: 
 		with open(dat_name,"r") as dat:
 			return dat.read()
@@ -48,28 +51,19 @@ def dat_slurp(dat_name=""):
 		print(f"Unable to read {dat_name}\n") 
 		sys.exit(1)
 		
-def series_parse( data ):
-	return [ vformat( line.split() ) for line in data.strip().split("\n") ] 
-
-def join_series( data ):
-	return "\n".join( [ ",".join( [ data[s][i] for s in range(len(data)) ] ) for i in range(len(data[0])) ] )
-
-def CSVwrite( dat_data ):
-	with open( CSVfile, "w" ) as f:
-		f.write(join_series(dat_data))
-
-def series_info( dat_data ): 
-	print( dat_data ) 
-
 def main( sysargs ):
 	if len(sysargs) > 1:
 		dat_data = dat_slurp(sysargs[1])
 	else :
 		dat_data = dat_slurp()
 
-	dat_data = [ series_parse( column ) for column in dat_data.split( "\n\n\n" ) ]
-	
-	series_info( dat_data )
+	dat_data = dat_data.split( "\n\n\n" )
+
+	M = Series( dat_data[0] )
+	M.info()
+	S = Series( dat_data[1] )
+	S.info()
+	M.calc_path()
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
