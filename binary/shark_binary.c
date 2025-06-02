@@ -8,6 +8,14 @@
 
 /* Shark from DSK */
 
+/* Use a binary search algorthm
+ * D: start with a given delta
+ *   T: try delta at each position (+ and - ) and select minimal
+ *     if minimal is no change, halve delta and go to D
+ *     if minimal is repeat at same location, double delta go to D
+ *     else go to T
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,8 +33,198 @@
  * gcc -o shark shark.c -lgsl -lm
  * */
 
+struct trial {
+    int index ; // element where change was made
+                // -1 for none
+    double delta ;
+    double segment ; // length of index element
+    double length ;
+    double penalty ;
+} ;
+
+double * radii ;
+double * angles ;
+double * segments ;
+double * shark ;
+
+void allocate_arrays( void ) ;
+void unallocate( void ) ;
+
+void initial_path( struct trial * tr ) ;
+void penalty( struct trial * tr ) ;
+void new_normal( struct trial * tr ) ;
+void perturb_calc( struct trial * tr ) ;
+void copy_trial( struct trial * dest, struct trial * source ) ;
+int test_delta( struct trial * tr, double new_delta ) ;
+void iterate_delta( struct trial * tr, int max_halving ) ;
+
+
 // Number of points (plus 1 for endpoints) */
 int PATH_POINTS = 100 ;
+double SHARK_V = 4.0 ; // relative speed
+#define SHARK_INIT_ANGLE M_PI // opposite side
+int verbose = 0 ;
+
+void allocate_arrays( void ) {
+    angles = calloc( PATH_POINTS+1, sizeof( double ) ) ;
+    if ( angles==NULL ) {
+        exit(1) ;
+    }
+
+    segments = calloc( PATH_POINTS+1, sizeof( double ) ) ;
+    if ( segments==NULL ) {
+        exit(1) ;
+    }
+
+    radii = calloc( PATH_POINTS+1, sizeof( double ) ) ;
+    if ( radii==NULL ) {
+        exit(1) ;
+    }
+
+    shark = calloc( PATH_POINTS+1, sizeof( double ) ) ;
+    if ( shark==NULL ) {
+        exit(1) ;
+    }
+}
+
+void unallocate( void ) { // never called
+    if ( angles ) free( angles ) ;
+    if ( segments ) free( segments ) ;
+    if ( radii ) free( radii ) ;
+    if ( shark ) free( shark ) ;
+}
+
+void initial_path( struct trial * tr ) {
+	for ( int i = 0 ; i <= PATH_POINTS ; ++i ) {
+		radii[i] = (double) i / PATH_POINTS ;
+		angles[i] = 0. ;
+	}
+	segments[0] = 0 ;
+	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
+		segments[i] = radii[i] - radii[i-1] ;
+	}
+	
+	tr->index = PATH_POINTS + 1 ; // no index ;
+	tr->delta = 0 ;
+	tr-> length = 1. ; // straight path radius 1
+	penalty( tr ) ;
+}
+
+void penalty( struct trial * tr ) {
+	// also computes shark array
+	int transition = PATH_POINTS / SHARK_V ;
+	double s = SHARK_INIT_ANGLE ;
+	double p = 0 ; // penalty
+	// adjust everything after trial index
+	double l,a ;
+	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
+		if ( i < tr->index ) {
+			l = segments[i] ;
+			a = angles[i] ;
+		} else if ( i > tr->index ) {
+			l = segments[i] ;
+			a = angles[i] + tr->delta ;
+		} else {
+			l = tr->segment ;
+			a = angles[i] + tr->delta ;
+		}
+		
+		double rem = gsl_sf_angle_restrict_symm( a - s ) ;
+		double max_shark = l * SHARK_V ;
+		s += (rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark ) ;
+		if ( ( i > transition ) && ( fabs( s - a ) < .001 ) ) {
+			p += l + (i==PATH_POINTS) ;
+		}
+	}
+	tr->penalty = p ;
+}
+
+void new_normal( struct trial * tr ) {
+	segments[tr->index] = tr->segment ;
+	
+	for ( int i = tr->index ; i <= PATH_POINTS ; ++i ) {
+		angles[i] += tr->delta ;
+	}
+	
+	tr->segment = 0. ;
+	tr->index = PATH_POINTS + 1 ;
+}
+
+void perturb_calc( struct trial * tr ) {
+	int i = tr->index ;
+	double r = radii[i] ;
+	double last_r = radii[i-1] ;
+	tr->segment = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i]+tr->delta-angles[i-1] ) );
+	tr->length += tr->segment - segments[i] ;
+	penalty( tr ) ;
+}			
+
+void copy_trial( struct trial * dest, struct trial * source ) {
+	memcpy( dest, source, sizeof( struct trial ) ) ;
+}
+
+int test_delta( struct trial * tr ) {
+	// return 1 if a change
+	// return 0 if no change ( need to halve the delta )
+	struct trial best ;
+	struct trial test ;
+	double best_score = tr->length + tr->penalty ;
+	copy_trial( &best, tr ) ;
+	
+	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
+		copy_trial( &test, tr ) ;
+		test.index = i ;
+		test.delta = tr->delta ;
+		perturb_calc( &best ) ;
+		double score = best.length + best.penalty ;
+		if ( score < best_score ) {
+			copy_trial( &best, &test ) ;
+			best_score = score ;
+		}
+	}
+	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
+		copy_trial( &test, tr ) ;
+		test.index = i ;
+		test.delta = -tr->delta ;
+		perturb_calc( &best ) ;
+		double score = best.length + best.penalty ;
+		if ( score < best_score ) {
+			copy_trial( &best, &test ) ;
+			best_score = score ;
+		}
+	}
+	
+	if ( best.index == PATH_POINTS + 1 ) {
+		// no change
+		return 0 ;
+	}
+	// change
+	copy_trial( tr, &best ) ; // copy back
+	new_normal( tr ) ; // set as standard
+	return 1 ;
+}
+
+void iterate_delta( struct trial * tr, int max_halving ) {
+	halve = 0 ;
+	while ( halve < max_halving ) {
+		if ( verbose ) {
+			printf( "%d ",halve ) ;
+		}
+		if ( test_delta( tr ) == 0 ) {
+			tr->delta *= .5 ;
+			++ halve ;
+		}
+	}
+}
+
+void run( void ) {
+	struct trial trial_struct ;
+	trial_struct.delta = M_PI / 2. ;
+	allocate_arrays() ;
+	initial_path( &trial_struct ) ;
+	iterate_delta( &trial_struct ) ;
+	penalty( &trial_struct ) ;
+}	
 
 int verbose = 0 ;
 
@@ -41,8 +239,6 @@ double STEP_MULTIPLIER = 1.0 ; // multiplier for pertubation
 double PENALTY_MULT = 1.0 ; // penalty multiplier
 
 /* Shark params */
-double SHARK_V = 4.0 ; // relative speed
-#define SHARK_INIT_ANGLE M_PI // opposite side
 double  * shark_pos ;
 
 // man's position
@@ -54,16 +250,6 @@ struct point {
 
 // for file names
 char * add_text = NULL ;
-
-// man_pos array -- straight run to the beach
-void initial_path( void ) {
-    man_pos = (struct point *) calloc( PATH_POINTS + 1, sizeof( struct point ) ) ; 
-    shark_pos = (double *) calloc( PATH_POINTS + 1, sizeof(double) ) ;
-    for ( int i=0 ; i<=PATH_POINTS ; ++i ) {
-        man_pos[i].r = (double) i / PATH_POINTS ;
-        man_pos[i].angle = 0 ;
-    }
-}
 
 // Calculate the run
 // return length, update shark_pos and update penalty
@@ -367,7 +553,6 @@ int main( int argc, char ** argv ) {
     T = gsl_rng_default ;
     rng = gsl_rng_alloc( T ) ;
     
-    initial_path() ;
     printf( "Data points: %i\n",PATH_POINTS ) ;
     if ( verbose==0 ) {
         printf("\tcalculating -- may take a while\n");
