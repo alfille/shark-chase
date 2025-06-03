@@ -22,31 +22,29 @@
 #include <getopt.h>
 #include <math.h>
 
-/* Gnu Scientific Library for Simulated Annealing and Random */
-#include <gsl/gsl_siman.h>
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_sf_trig.h>
-
-/* Also uses Gnuplot for visulaization */
+/* Uses Gnuplot for visulaization */
 
 /* Compile:
- * gcc -o shark shark.c -lgsl -lm
+ * gcc -o shark shark.c -lm
  * */
 
+enum perturb_result { no_change, first_change, second_change } ;
 struct trial {
-    int index ; // element where change was made
-                // -1 for none
-    double delta ;
-    double segment ; // length of index element
-    double length ;
-    double penalty ;
+    int index ; // element where change was made or NO_PATH (=PATH_PONTS+1) for none
+    int last_index ; // for doubling
+    double delta ; // change made to angle of index element
+    double segment ; // calculated length of (altered) index element
+    double length ; // calculated total length
+    double penalty ; // penalty calculated, or PENALTY_UNCALCULATED flag 
 } ;
 
-double * radii = NULL ;
-double * angles = NULL ;
-double * segments = NULL ;
-double * shark = NULL ;
+double * radii = NULL ; // distance from center
+double * angles = NULL ; // angle from baseline
+double * segments = NULL ; // calculated distances between radii/angles
+double * shark = NULL ; // smart sharks's angle around circumference 
 
+/* function prototypees */
+double angle_restrict( double angle ) ;
 void allocate_arrays( void ) ;
 void unallocate( void ) ;
 
@@ -56,7 +54,7 @@ void accept_trial( struct trial * tr ) ;
 double score_calc( struct trial * tr ) ;
 void perturb_calc( struct trial * tr ) ;
 void copy_trial( struct trial * dest, struct trial * source ) ;
-int test_delta( struct trial * tr ) ;
+enum perturb_result test_delta( struct trial * tr ) ;
 void iterate_delta( struct trial * tr ) ;
 void run( void ) ;
 
@@ -70,10 +68,26 @@ int PATH_POINTS = 100 ; // Number of points (plus 1 for endpoints)
 double SHARK_V = 4.0 ; // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
 int verbose = 0 ; // More progress reports
-#define PENALTY_UNCALCULATED -1 // Not yet calculated
+#define PENALTY_UNCALCULATED ( (double)-1.0 ) // Not yet calculated
 int GENS = 25 ; // Number of halving times for delta
 
+void Ptrial( struct trial * tr ) {
+	printf( "ind=%d, del=%g, seg=%g, length=%g, penalty=%g %s\n",tr->index, tr->delta, tr->segment, tr->length, tr->penalty, (tr->penalty==PENALTY_UNCALCULATED) ? "UNC": "CAL" ) ;
+}
+
+double angle_restrict( double angle ) {
+	static double PI2 = 2 * M_PI ;
+	while ( angle <= -M_PI ) {
+		angle += PI2 ;
+	}
+	while ( angle > M_PI ) {
+		angle -= PI2 ;
+	}
+	return angle ;
+}
+
 void allocate_arrays( void ) {
+	// fencepost allocation -- PATH_POINTS segments with 1 extra for the endpost 
     angles = calloc( PATH_POINTS+1, sizeof( double ) ) ;
     if ( angles==NULL ) {
         exit(1) ;
@@ -103,6 +117,7 @@ void unallocate( void ) { // never called
 }
 
 void initial_path( struct trial * tr ) {
+	// run straight to the edge
 	for ( int i = 0 ; i <= PATH_POINTS ; ++i ) {
 		radii[i] = (double) i / PATH_POINTS ;
 		angles[i] = 0. ;
@@ -112,9 +127,10 @@ void initial_path( struct trial * tr ) {
 		segments[i] = radii[i] - radii[i-1] ;
 	}
 	
-	tr->index = PATH_POINTS + 1 ; // no index ;
-	tr->delta = 0 ;
-	tr-> length = 1. ; // straight path radius 1
+	tr->index = NO_PATH ; // no index ;
+	tr->last_index = NO_PATH ;
+	tr->delta = M_PI / 4.0 ; // initial delta
+	tr-> length = 1.0 ; // straight path radius 1
 	tr->penalty = PENALTY_UNCALCULATED ;
 }
 
@@ -122,44 +138,56 @@ void penalty_calc( struct trial * tr ) {
 	// also computes shark array
 	int transition = PATH_POINTS / SHARK_V ;
 	double s = SHARK_INIT_ANGLE ;
+	shark[0] = s ;
 	double p = 0 ; // penalty
 	// adjust everything after trial index
-	double l,a ;
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
+		// adjusted angle and segment length
+		double a ;
+		double l = segments[i] ;
 		if ( i < tr->index ) {
-			l = segments[i] ;
 			a = angles[i] ;
-		} else if ( i > tr->index ) {
-			l = segments[i] ;
-			a = angles[i] + tr->delta ;
 		} else {
-			l = tr->segment ;
-			a = angles[i] + tr->delta ;
+			a = angles[i] + tr->delta ;			
+			if ( i == tr->index ) {
+				l = tr->segment ;
+			}
 		}
 		
-		double rem = remainder( a - s, 2*M_PI ) ;
-		double max_shark = l * SHARK_V ;
+		// Shark goes to man's angle upto max speed
+		double rem = angle_restrict( a - s ) ; // corrected angular difference
+		double max_shark = l * SHARK_V ; // max distance can travel
 		s += (rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark ) ;
-		if ( ( i > transition ) && ( fabs( s - a ) < .001 ) ) {
+		if ( ( i > transition ) && ( fabs( rem ) < .001 ) ) {
+			// penalty
 			p += l + (i==PATH_POINTS) ;
 		}
+		shark[i] = s ;
+		//printf("angle %g, shark %g, max_shark %g, rem %g, p %g\n",a,s,max_shark,rem,p);
 	}
 	tr->penalty = p ;
+	//printf("Penalty ");
+	//Ptrial( tr ) ;
 }
 
 double score_calc( struct trial * tr ) {
 	// calculate score for minimizing
 	if ( tr->penalty == PENALTY_UNCALCULATED ) {
+		// calculate penalty if not yet computed
 		penalty_calc( tr ) ;
 	}
 	return tr->length + PENALTY_MULT * tr->penalty ;
 }
 
 void accept_trial( struct trial * tr ) {
-	segments[tr->index] = tr->segment ;
-	
-	for ( int i = tr->index ; i <= PATH_POINTS ; ++i ) {
-		angles[i] += tr->delta ;
+	// perturbed version will now be baseline
+	// leaves delta and penalty unchanged
+	if ( tr->index != NO_PATH ) {
+		segments[tr->index] = tr->segment ;
+		
+		for ( int i = tr->index ; i <= PATH_POINTS ; ++i ) {
+			angles[i] += tr->delta ;
+		}
 	}
 	
 	tr->segment = 0. ;
@@ -167,81 +195,105 @@ void accept_trial( struct trial * tr ) {
 }
 
 void perturb_calc( struct trial * tr ) {
-	int i = tr->index ;
-	double r = radii[i] ;
+	// use law of cosines to calculate segment length from altered angle
+	int i = tr->index ; // segment start
+	double r = radii[i] ; 
 	double last_r = radii[i-1] ;
-	tr->segment = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i]+tr->delta-angles[i-1] ) );
-	tr->length += tr->segment - segments[i] ;
-	tr->penalty = PENALTY_UNCALCULATED ;
+	tr->segment = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i] + (tr->delta) - angles[i-1] ) );
+	tr->length += tr->segment - segments[i] ; // update length
+	tr->penalty = PENALTY_UNCALCULATED ; // penalty no longer accurate
 }			
 
 void copy_trial( struct trial * dest, struct trial * source ) {
 	memcpy( dest, source, sizeof( struct trial ) ) ;
 }
 
-int test_delta( struct trial * tr ) {
+enum perturb_result test_delta( struct trial * tr ) {
 	// return 1 if a change
 	// return 0 if no change ( need to halve the delta )
-	struct trial best ;
 	struct trial test ;
+	double old_length = tr->length ;
+	copy_trial( &test, tr ) ;
 	
 	// set index case as best (to test against)
 	double best_score = score_calc( tr ) ;
-	copy_trial( &best, tr ) ;
+	//printf("Best score %f ",best_score ) ;
+	//Ptrial( tr ) ;
 	
-	// positive pertubation
 	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
-		copy_trial( &test, tr ) ;
 		test.index = i ;
+		test.length = old_length ;
+		// positive pertubation
 		test.delta = tr->delta ;
-		test.penalty = PENALTY_UNCALCULATED ;
-		perturb_calc( &best ) ;
+		perturb_calc( &test ) ;
 		if ( test.length < best_score ) {
-			double score = score_calc( &best ) ;
+			//printf("test1 ");
+			double score = score_calc( &test ) ;
 			if ( score < best_score ) {
-				copy_trial( &best, &test ) ;
+				copy_trial( tr, &test ) ;
 				best_score = score ;
+				//printf("New best %f | ",best_score);
+				//Ptrial(tr) ;
 			}
 		}
-	}
-
-	// negative pertubation
-	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
-		copy_trial( &test, tr ) ;
-		test.index = i ;
-		test.delta = -tr->delta ;
-		test.penalty = PENALTY_UNCALCULATED ;
-		perturb_calc( &best ) ;
+		test.length = old_length ;
+		// negative pertubation
+		test.delta = -(tr->delta) ;
+		perturb_calc( &test ) ;
 		if ( test.length < best_score ) {
-			// now add penalty
-			double score = score_calc( &best ) ;
+			//printf("test1 ");
+			double score = score_calc( &test ) ;
 			if ( score < best_score ) {
-				copy_trial( &best, &test ) ;
+				copy_trial( tr, &test ) ;
 				best_score = score ;
+				//printf("New best %f | ",best_score);
+				//Ptrial(tr) ;
 			}
 		}
 	}
 	
 	// choose best
-	if ( best.index == PATH_POINTS + 1 ) {
+	if ( tr->index == NO_PATH ) {
 		// no change
-		return 0 ;
+		tr->last_index = NO_PATH ; // turn off collection 2 for doubling
+		return no_change ;
+	} else if ( tr->last_index == tr->index ) {
+		// yes change
+		accept_trial( tr ) ; // set as standard
+		return second_change ;
+	} else {
+		tr->last_index = tr->index ;
+		accept_trial( tr ) ; // set as standard
+		return first_change ;
 	}
-	// yes change
-	copy_trial( tr, &best ) ; // copy back
-	accept_trial( tr ) ; // set as standard
-	return 1 ;
 }
 
 void iterate_delta( struct trial * tr ) {
 	int halve = 0 ;
 	while ( halve < GENS ) {
-		if ( verbose ) {
-			printf( "%d ",halve ) ;
+		switch ( test_delta( tr ) ) {
+			case no_change:
+				tr->delta *= .5 ;
+				++ halve ;
+				if ( verbose ) {
+					printf( "Generation %d ",halve ) ;
+					Ptrial( tr ) ;
+				}
+				break ;
+			case first_change:
+				break ;
+			case second_change:
+				tr->delta *= 2 ;
+				-- halve ;
+				if ( verbose ) {
+					printf( "Generation %d ",halve ) ;
+					Ptrial( tr ) ;
+				}
+				break ;
 		}
-		if ( test_delta( tr ) == 0 ) {
-			tr->delta *= .5 ;
-			++ halve ;
+		if ( verbose ) {
+			printf( "Generation %d delta=%g",halve,tr->delta ) ;
+			Ptrial( tr ) ;
 		}
 	}
 }
@@ -250,13 +302,10 @@ void run( void ) {
 	struct trial trial_struct ;
 	allocate_arrays() ; // make space for arrays
 
-	trial_struct.delta = M_PI / 2. ; // initial delta
-	initial_path( &trial_struct ) ; // 
-	iterate_delta( &trial_struct ) ;
-	if ( trial_struct.penalty == PENALTY_UNCALCULATED ) {
-		penalty_calc( &trial_struct ) ;
-	}
-	Graph( &trial_struct ) ;
+	initial_path( &trial_struct ) ; // setup
+	iterate_delta( &trial_struct ) ; // solve
+	penalty_calc( &trial_struct ) ; // set shark
+	Graph( &trial_struct ) ; // show
 }	
 
 // For printing
@@ -352,8 +401,8 @@ void help() {
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");
-    printf("\t-x%g\t--penalty\tPenalty multiplier (default %g)",PENALTY_MULT,PENALTY_MULT);
-    printf("\t-g%d\t--generations\tNumber of halving error delta (default (%d)",GENS,GENS);
+    printf("\t-x%g\t--penalty\tPenalty multiplier (default %g)\n",PENALTY_MULT,PENALTY_MULT);
+    printf("\t-g%d\t--generations\tNumber of halving error delta (default (%d)\n",GENS,GENS);
     exit(1);
 }
 
@@ -372,7 +421,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:vhx:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:vhx:g:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
