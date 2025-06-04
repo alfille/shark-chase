@@ -29,6 +29,7 @@
 int PATH_POINTS = 100 ;
 
 int verbose = 0 ;
+int CENTER = 0 ; // concentrate points in center
 
 /* Simulated Annealing Parameters */
 int N_TRIES= 10000 ; // points before stepping
@@ -63,6 +64,24 @@ void initial_path( void ) {
         man_pos[i].r = (double) i / PATH_POINTS ;
         man_pos[i].angle = 0 ;
     }
+	if ( CENTER ) {
+		double R_crit = 1 / SHARK_V ; // critical radius where man faster than shark
+		int half  = PATH_POINTS / 2 ;
+		int rest = PATH_POINTS - half ;
+		for ( int i = 0 ; i < half ; ++i ) {
+			man_pos[i].r = (double) i / ( (double) half ) * R_crit ;
+			man_pos[i].angle = 0. ;
+		}
+		for ( int i = half ; i <= PATH_POINTS ; ++i ) {
+			man_pos[i].r = (double) (i-half) / (double) rest * ( 1 - R_crit ) + R_crit ;
+			man_pos[i].angle = 0. ;
+		}
+	} else {
+		for ( int i=0 ; i<=PATH_POINTS ; ++i ) {
+			man_pos[i].r = (double) i / PATH_POINTS ;
+			man_pos[i].angle = 0 ;
+		}
+	}
 }
 
 // Calculate the run
@@ -262,6 +281,7 @@ void help() {
     printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
+    printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
@@ -282,6 +302,7 @@ struct option long_options[] =
     {"path"   ,   required_argument, 0, 'p'},
     {"speed"  ,   required_argument, 0, 's'},
 	{"add"    ,   required_argument, 0, 'a'},
+	{"center" ,   no_argument,       0, 'c'},
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
     {"ntries" ,   required_argument, 0, 'n'},
@@ -298,7 +319,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:vhx:n:i:m:K:u:t:z:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cvhx:n:i:m:K:u:t:z:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -311,6 +332,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
                 break ;
             case 'a':
 				add_text = (char *) optarg ;
+				break ;
+			case 'c':
+				CENTER = 1 ;
 				break ;
             case 'v':
                 verbose = 1 ;

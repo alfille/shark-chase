@@ -44,7 +44,6 @@ double * segments = NULL ; // calculated distances between radii/angles
 double * shark = NULL ; // smart sharks's angle around circumference 
 
 /* function prototypees */
-double angle_restrict( double angle ) ;
 void allocate_arrays( void ) ;
 void unallocate( void ) ;
 
@@ -68,22 +67,12 @@ int PATH_POINTS = 100 ; // Number of points (plus 1 for endpoints)
 double SHARK_V = 4.0 ; // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
 int verbose = 0 ; // More progress reports
+int CENTER = 0 ; // concentrate points in center
 #define PENALTY_UNCALCULATED ( (double)-1.0 ) // Not yet calculated
 int GENS = 25 ; // Number of halving times for delta
 
 void Ptrial( struct trial * tr ) {
 	printf( "ind=%d, del=%g, seg=%g, length=%g, penalty=%g %s\n",tr->index, tr->delta, tr->segment, tr->length, tr->penalty, (tr->penalty==PENALTY_UNCALCULATED) ? "UNC": "CAL" ) ;
-}
-
-double angle_restrict( double angle ) {
-	static double PI2 = 2 * M_PI ;
-	while ( angle <= -M_PI ) {
-		angle += PI2 ;
-	}
-	while ( angle > M_PI ) {
-		angle -= PI2 ;
-	}
-	return angle ;
 }
 
 void allocate_arrays( void ) {
@@ -118,12 +107,25 @@ void unallocate( void ) { // never called
 
 void initial_path( struct trial * tr ) {
 	// run straight to the edge
-	for ( int i = 0 ; i <= PATH_POINTS ; ++i ) {
-		radii[i] = (double) i / PATH_POINTS ;
-		angles[i] = 0. ;
+	if ( CENTER ) {
+		double R_crit = 1 / SHARK_V ; // critical radius where man faster than shark
+		int half  = PATH_POINTS / 2 ;
+		int rest = PATH_POINTS - half ;
+		for ( int i = 0 ; i < half ; ++i ) {
+			radii[i] = (double) i / ( (double) half ) * R_crit ;
+		}
+		for ( int i = half ; i <= PATH_POINTS ; ++i ) {
+			radii[i] = (double) (i-half) / (double) rest * ( 1 - R_crit ) + R_crit ;
+		}
+	} else {
+		for ( int i = 0 ; i <= PATH_POINTS ; ++i ) {
+			radii[i] = (double) i / PATH_POINTS ;
+		}
 	}
 	segments[0] = 0 ;
+	angles[0] = 0. ;
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
+		angles[i] = 0. ;
 		segments[i] = radii[i] - radii[i-1] ;
 	}
 	
@@ -155,7 +157,7 @@ void penalty_calc( struct trial * tr ) {
 		}
 		
 		// Shark goes to man's angle upto max speed
-		double rem = angle_restrict( a - s ) ; // corrected angular difference
+		double rem = remainder( a - s , 2*M_PI) ; // corrected angular difference
 		double max_shark = l * SHARK_V ; // max distance can travel
 		s += (rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark ) ;
 		if ( ( i > transition ) && ( fabs( rem ) < .001 ) ) {
@@ -397,6 +399,7 @@ void help() {
     printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
+    printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
@@ -411,6 +414,7 @@ struct option long_options[] =
     {"path"   ,   required_argument, 0, 'p'},
     {"speed"  ,   required_argument, 0, 's'},
 	{"add"    ,   required_argument, 0, 'a'},
+	{"center" ,   no_argument,       0, 'c'},
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
 	{"generations",   required_argument, 0, 'g'},
@@ -421,7 +425,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:vhx:g:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cvhx:g:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -434,6 +438,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
                 break ;
             case 'a':
 				add_text = (char *) optarg ;
+				break ;
+			case 'c':
+				CENTER = 1 ;
 				break ;
             case 'v':
                 verbose = 1 ;
