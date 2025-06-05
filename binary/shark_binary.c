@@ -33,10 +33,12 @@ struct trial {
     int index ; // element where change was made or NO_PATH (=PATH_PONTS+1) for none
     int last_index ; // for doubling
     double delta ; // change made to angle of index element
-    double segment ; // calculated length of (altered) index element
     double length ; // calculated total length
     double penalty ; // penalty calculated, or PENALTY_UNCALCULATED flag 
+    double adj_seg[] ; // calculated length of (altered) index element
 } ;
+struct * base_tr = NULL ;
+struct * test_tr = NULL ;
 
 double * radii = NULL ; // distance from center
 double * angles = NULL ; // angle from baseline
@@ -70,9 +72,19 @@ int verbose = 0 ; // More progress reports
 int CENTER = 0 ; // concentrate points in center
 #define PENALTY_UNCALCULATED ( (double)-1.0 ) // Not yet calculated
 int GENS = 25 ; // Number of halving times for delta
+int SMOOTH = 0; // how far spread for smoothing
+
+#define Smooth_size ( 2*SMOOTH + 1 )
+#define Smooth_center ( SMOOTH+1 )
+
+double * Smoother = NULL
 
 void Ptrial( struct trial * tr ) {
-	printf( "ind=%d, del=%g, seg=%g, length=%g, penalty=%g %s\n",tr->index, tr->delta, tr->segment, tr->length, tr->penalty, (tr->penalty==PENALTY_UNCALCULATED) ? "UNC": "CAL" ) ;
+	printf( "ind=%d, del=%g, length=%g, penalty=%g, segs:",tr->index, tr->delta, tr->length, tr->penalty) ;
+	for ( int i = 0 ; i < SMOOTH ; ++i ) {
+		printf( " %f",tr->adj_seg[i] ) ;
+	}
+	printf("\n");
 }
 
 void allocate_arrays( void ) {
@@ -96,6 +108,18 @@ void allocate_arrays( void ) {
     if ( shark==NULL ) {
         exit(1) ;
     }
+    base_tr = (struct trial *) malloc( sizeof( struct trial ) + Smooth_size * sizeof( double ) ) ;
+    if ( base_tr==NULL ) {
+        exit(1) ;
+    }
+    test_tr = (struct trial *) malloc( sizeof( struct trial ) + Smooth_size * sizeof( double ) ) ;
+    if ( test_tr==NULL ) {
+        exit(1) ;
+    }
+    Smoother = (double *) malloc( (SMOOTH + 1) * sizeof( double ) ) ;  ;
+    if ( Smoother==NULL ) {
+        exit(1) ;
+    }
 }
 
 void unallocate( void ) { // never called
@@ -103,9 +127,17 @@ void unallocate( void ) { // never called
     if ( segments ) free( segments ) ;
     if ( radii ) free( radii ) ;
     if ( shark ) free( shark ) ;
+    if ( base_tr ) free( base_tr ) ;
+    if ( test_tr ) free( test_tr ) ;
 }
 
 void initial_path( struct trial * tr ) {
+	// smoothing values
+	Smoother[0] = 1.
+	for ( int i = 1 ; i < SMOOTH ; ++i ) {
+		Smoother[i] = .5 * Smoother[i-1] ;
+	}
+	
 	// run straight to the edge
 	if ( CENTER ) {
 		double R_crit = 1 / SHARK_V ; // critical radius where man faster than shark
@@ -143,30 +175,28 @@ void penalty_calc( struct trial * tr ) {
 	shark[0] = s ;
 	double p = 0 ; // penalty
 	// adjust everything after trial index
+	double incr = 0. // cumulative angle increment
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 		// adjusted angle and segment length
-		double a ;
 		double l = segments[i] ;
-		if ( i < tr->index ) {
-			a = angles[i] ;
+		int dist = fabs( tr->index - i ) ;
+		if ( fabs(dist) < SMOOTH ) {
+			incr += Smoother[ dist ] * tr-> delta ;
+			l = adj_seg[i + SMOOTH - tr->index] ;
 		} else {
-			a = angles[i] + tr->delta ;			
-			if ( i == tr->index ) {
-				l = tr->segment ;
-			}
+			l = segments[i] ;
 		}
 		
 		// Shark goes to man's angle upto max speed
-		double rem = remainder( a - s , 2*M_PI) ; // corrected angular difference
+		double rem = remainder( angles[i] + incr - s , 2*M_PI) ; // corrected angular difference
 		double max_shark = l * SHARK_V ; // max distance can travel
 		s += (rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark ) ;
 		if ( ( i > transition ) && ( fabs( rem ) < .001 ) ) {
 			// penalty
 			p += l + (i==PATH_POINTS) ;
 		}
-		shark[i] = s ;
-		//printf("angle %g, shark %g, max_shark %g, rem %g, p %g\n",a,s,max_shark,rem,p);
-	}
+
+}
 	tr->penalty = p ;
 	//printf("Penalty ");
 	//Ptrial( tr ) ;
@@ -185,14 +215,14 @@ void accept_trial( struct trial * tr ) {
 	// perturbed version will now be baseline
 	// leaves delta and penalty unchanged
 	if ( tr->index != NO_PATH ) {
-		segments[tr->index] = tr->segment ;
+		segments[tr->index] = tr->adj_seg ;
 		
 		for ( int i = tr->index ; i <= PATH_POINTS ; ++i ) {
 			angles[i] += tr->delta ;
 		}
 	}
 	
-	tr->segment = 0. ;
+	tr->adj_seg = 0. ;
 	tr->index = NO_PATH ;
 }
 
@@ -201,9 +231,18 @@ void perturb_calc( struct trial * tr ) {
 	int i = tr->index ; // segment start
 	double r = radii[i] ; 
 	double last_r = radii[i-1] ;
-	tr->segment = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i] + (tr->delta) - angles[i-1] ) );
-	tr->length += tr->segment - segments[i] ; // update length
+	tr->adj_seg = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i] + (tr->delta) - angles[i-1] ) );
+	tr->length += tr->adj_seg - segments[i] ; // update length
 	tr->penalty = PENALTY_UNCALCULATED ; // penalty no longer accurate
+	// adjusted angle and segment length
+	double l = segments[i] ;
+	int dist = fabs( tr->index - i ) ;
+	if ( fabs(dist) < SMOOTH ) {
+		incr += Smoother[ dist ] * tr-> delta ;
+		l = adj_seg[i + SMOOTH - tr->index] ;
+	} else {
+		l = segments[i] ;
+	}
 }			
 
 void copy_trial( struct trial * dest, struct trial * source ) {
@@ -213,40 +252,40 @@ void copy_trial( struct trial * dest, struct trial * source ) {
 enum perturb_result test_delta( struct trial * tr ) {
 	// return 1 if a change
 	// return 0 if no change ( need to halve the delta )
-	struct trial test ;
+	struct trial test_tr ;
 	double old_length = tr->length ;
-	copy_trial( &test, tr ) ;
+	copy_trial( &test_tr, tr ) ;
 	
-	// set index case as best (to test against)
+	// set index case as best (to test_tr against)
 	double best_score = score_calc( tr ) ;
 	//printf("Best score %f ",best_score ) ;
 	//Ptrial( tr ) ;
 	
 	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
-		test.index = i ;
-		test.length = old_length ;
+		test_tr.index = i ;
+		test_tr.length = old_length ;
 		// positive pertubation
-		test.delta = tr->delta ;
-		perturb_calc( &test ) ;
-		if ( test.length < best_score ) {
+		test_tr.delta = tr->delta ;
+		perturb_calc( &test_tr ) ;
+		if ( test_tr.length < best_score ) {
 			//printf("test1 ");
-			double score = score_calc( &test ) ;
+			double score = score_calc( &test_tr ) ;
 			if ( score < best_score ) {
-				copy_trial( tr, &test ) ;
+				copy_trial( tr, &test_tr ) ;
 				best_score = score ;
 				//printf("New best %f | ",best_score);
 				//Ptrial(tr) ;
 			}
 		}
-		test.length = old_length ;
+		test_tr.length = old_length ;
 		// negative pertubation
-		test.delta = -(tr->delta) ;
-		perturb_calc( &test ) ;
-		if ( test.length < best_score ) {
+		test_tr.delta = -(tr->delta) ;
+		perturb_calc( &test_tr ) ;
+		if ( test_tr.length < best_score ) {
 			//printf("test1 ");
-			double score = score_calc( &test ) ;
+			double score = score_calc( &test_tr ) ;
 			if ( score < best_score ) {
-				copy_trial( tr, &test ) ;
+				copy_trial( tr, &test_tr ) ;
 				best_score = score ;
 				//printf("New best %f | ",best_score);
 				//Ptrial(tr) ;
@@ -400,6 +439,7 @@ void help() {
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
     printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
+    printf("\t-s%d\t--smooth\t\tNumber of side elements to add to smoothing (default(%d)\n",SMOOTH,SMOOTH);
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
@@ -415,6 +455,7 @@ struct option long_options[] =
     {"speed"  ,   required_argument, 0, 's'},
 	{"add"    ,   required_argument, 0, 'a'},
 	{"center" ,   no_argument,       0, 'c'},
+	{"smooth" ,   required_argument, 0, 's'}, 
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
 	{"generations",   required_argument, 0, 'g'},
@@ -441,6 +482,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
 				break ;
 			case 'c':
 				CENTER = 1 ;
+				break ;
+			case 's':
+				SMOOTH = (int) atoi(optarg);
 				break ;
             case 'v':
                 verbose = 1 ;
