@@ -1,3 +1,5 @@
 # Summary
 
-- [Chapter 1](./chapter_1.md)
+- [The Shark Puzzle](./puzzle.md)
+  - [Why is it hard]((./why.md)
+  - [

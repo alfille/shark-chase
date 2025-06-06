@@ -37,8 +37,8 @@ struct trial {
     double penalty ; // penalty calculated, or PENALTY_UNCALCULATED flag 
     double adj_seg[] ; // calculated length of (altered) index element
 } ;
-struct * base_tr = NULL ;
-struct * test_tr = NULL ;
+struct trial * base_tr = NULL ;
+struct trial * test_tr = NULL ;
 
 double * radii = NULL ; // distance from center
 double * angles = NULL ; // angle from baseline
@@ -77,11 +77,11 @@ int SMOOTH = 0; // how far spread for smoothing
 #define Smooth_size ( 2*SMOOTH + 1 )
 #define Smooth_center ( SMOOTH+1 )
 
-double * Smoother = NULL
+double * Smoother = NULL ;
 
 void Ptrial( struct trial * tr ) {
 	printf( "ind=%d, del=%g, length=%g, penalty=%g, segs:",tr->index, tr->delta, tr->length, tr->penalty) ;
-	for ( int i = 0 ; i < SMOOTH ; ++i ) {
+	for ( int i = 0 ; i < Smooth_size ; ++i ) {
 		printf( " %f",tr->adj_seg[i] ) ;
 	}
 	printf("\n");
@@ -116,7 +116,7 @@ void allocate_arrays( void ) {
     if ( test_tr==NULL ) {
         exit(1) ;
     }
-    Smoother = (double *) malloc( (SMOOTH + 1) * sizeof( double ) ) ;  ;
+    Smoother = (double *) malloc( (SMOOTH + 1) * sizeof( double ) ) ;
     if ( Smoother==NULL ) {
         exit(1) ;
     }
@@ -129,11 +129,12 @@ void unallocate( void ) { // never called
     if ( shark ) free( shark ) ;
     if ( base_tr ) free( base_tr ) ;
     if ( test_tr ) free( test_tr ) ;
+    if ( Smoother ) free( Smoother ) ;
 }
 
 void initial_path( struct trial * tr ) {
 	// smoothing values
-	Smoother[0] = 1.
+	Smoother[0] = 1. ;
 	for ( int i = 1 ; i < SMOOTH ; ++i ) {
 		Smoother[i] = .5 * Smoother[i-1] ;
 	}
@@ -175,14 +176,14 @@ void penalty_calc( struct trial * tr ) {
 	shark[0] = s ;
 	double p = 0 ; // penalty
 	// adjust everything after trial index
-	double incr = 0. // cumulative angle increment
+	double incr = 0. ; // cumulative angle increment
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 		// adjusted angle and segment length
 		double l = segments[i] ;
-		int dist = fabs( tr->index - i ) ;
-		if ( fabs(dist) < SMOOTH ) {
+		int dist = abs( tr->index - i ) ;
+		if ( dist < SMOOTH ) {
 			incr += Smoother[ dist ] * tr-> delta ;
-			l = adj_seg[i + SMOOTH - tr->index] ;
+			l = tr->adj_seg[i + SMOOTH - tr->index] ;
 		} else {
 			l = segments[i] ;
 		}
@@ -195,8 +196,8 @@ void penalty_calc( struct trial * tr ) {
 			// penalty
 			p += l + (i==PATH_POINTS) ;
 		}
+	}
 
-}
 	tr->penalty = p ;
 	//printf("Penalty ");
 	//Ptrial( tr ) ;
@@ -215,46 +216,55 @@ void accept_trial( struct trial * tr ) {
 	// perturbed version will now be baseline
 	// leaves delta and penalty unchanged
 	if ( tr->index != NO_PATH ) {
-		segments[tr->index] = tr->adj_seg ;
-		
-		for ( int i = tr->index ; i <= PATH_POINTS ; ++i ) {
-			angles[i] += tr->delta ;
+	
+		double incr = 0. ; // cumulative angle increment
+		for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
+			// adjusted angle and segment length
+			int dist = abs( tr->index - i ) ;
+			if ( dist < SMOOTH ) {
+				incr += Smoother[ dist ] * tr-> delta ;
+				segments[i] = tr->adj_seg[i + SMOOTH - tr->index] ;
+			}
+			angles[i] += incr ;
 		}
 	}
-	
-	tr->adj_seg = 0. ;
+
 	tr->index = NO_PATH ;
 }
 
 void perturb_calc( struct trial * tr ) {
 	// use law of cosines to calculate segment length from altered angle
-	int i = tr->index ; // segment start
-	double r = radii[i] ; 
-	double last_r = radii[i-1] ;
-	tr->adj_seg = sqrt( r*r + last_r*last_r -2*r*last_r*cos( angles[i] + (tr->delta) - angles[i-1] ) );
-	tr->length += tr->adj_seg - segments[i] ; // update length
-	tr->penalty = PENALTY_UNCALCULATED ; // penalty no longer accurate
-	// adjusted angle and segment length
-	double l = segments[i] ;
-	int dist = fabs( tr->index - i ) ;
-	if ( fabs(dist) < SMOOTH ) {
-		incr += Smoother[ dist ] * tr-> delta ;
-		l = adj_seg[i + SMOOTH - tr->index] ;
-	} else {
-		l = segments[i] ;
+	int i0 = tr->index - SMOOTH ;
+	int i1 = tr->index + SMOOTH ;
+	if ( i0 < 1 ) {
+		i0 = 1 ;
 	}
+	if ( i1 > PATH_POINTS ) {
+		i1 = PATH_POINTS ;
+	}
+
+	for ( int i = i0 ; i <= i1 ; ++i ) {
+		double r = radii[i] ; 
+		double last_r = radii[i-1] ;
+		tr->adj_seg[i] = sqrt(
+			r*r
+			+ last_r*last_r
+			- 2*r*last_r*cos( angles[i] + Smoother[ abs( i - tr->index ) ] * tr->delta - angles[i-1] )
+			);
+		tr->length += tr->adj_seg[i] - segments[i] ; // update length
+	}
+	tr->penalty = PENALTY_UNCALCULATED ; // penalty no longer accurate
 }			
 
 void copy_trial( struct trial * dest, struct trial * source ) {
-	memcpy( dest, source, sizeof( struct trial ) ) ;
+	memcpy( dest, source, sizeof( struct trial ) + Smooth_size * sizeof( double ) ) ;
 }
 
 enum perturb_result test_delta( struct trial * tr ) {
 	// return 1 if a change
 	// return 0 if no change ( need to halve the delta )
-	struct trial test_tr ;
 	double old_length = tr->length ;
-	copy_trial( &test_tr, tr ) ;
+	copy_trial( test_tr, tr ) ;
 	
 	// set index case as best (to test_tr against)
 	double best_score = score_calc( tr ) ;
@@ -262,30 +272,30 @@ enum perturb_result test_delta( struct trial * tr ) {
 	//Ptrial( tr ) ;
 	
 	for ( int i= 1 ; i <= PATH_POINTS ; ++i ) {
-		test_tr.index = i ;
-		test_tr.length = old_length ;
+		test_tr->index = i ;
+		test_tr->length = old_length ;
 		// positive pertubation
-		test_tr.delta = tr->delta ;
-		perturb_calc( &test_tr ) ;
-		if ( test_tr.length < best_score ) {
+		test_tr->delta = tr->delta ;
+		perturb_calc( test_tr ) ;
+		if ( test_tr->length < best_score ) {
 			//printf("test1 ");
-			double score = score_calc( &test_tr ) ;
+			double score = score_calc( test_tr ) ;
 			if ( score < best_score ) {
-				copy_trial( tr, &test_tr ) ;
+				copy_trial( tr, test_tr ) ;
 				best_score = score ;
 				//printf("New best %f | ",best_score);
 				//Ptrial(tr) ;
 			}
 		}
-		test_tr.length = old_length ;
+		test_tr->length = old_length ;
 		// negative pertubation
-		test_tr.delta = -(tr->delta) ;
-		perturb_calc( &test_tr ) ;
-		if ( test_tr.length < best_score ) {
+		test_tr->delta = -(tr->delta) ;
+		perturb_calc( test_tr ) ;
+		if ( test_tr->length < best_score ) {
 			//printf("test1 ");
-			double score = score_calc( &test_tr ) ;
+			double score = score_calc( test_tr ) ;
 			if ( score < best_score ) {
-				copy_trial( tr, &test_tr ) ;
+				copy_trial( tr, test_tr ) ;
 				best_score = score ;
 				//printf("New best %f | ",best_score);
 				//Ptrial(tr) ;
@@ -340,13 +350,16 @@ void iterate_delta( struct trial * tr ) {
 }
 
 void run( void ) {
-	struct trial trial_struct ;
 	allocate_arrays() ; // make space for arrays
+	// also allocates base_tr structure 
 
-	initial_path( &trial_struct ) ; // setup
-	iterate_delta( &trial_struct ) ; // solve
-	penalty_calc( &trial_struct ) ; // set shark
-	Graph( &trial_struct ) ; // show
+	initial_path( base_tr ) ; // setup
+	iterate_delta( base_tr ) ; // solve
+	penalty_calc( base_tr ) ; // set shark
+	Graph( base_tr ) ; // show
+	
+	// optional
+	unallocate() ;
 }	
 
 // For printing
@@ -439,7 +452,7 @@ void help() {
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
     printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
-    printf("\t-s%d\t--smooth\t\tNumber of side elements to add to smoothing (default(%d)\n",SMOOTH,SMOOTH);
+    printf("\t-m%d\t--smooth\t\tNumber of side elements to add to smoothing (default %d)\n",SMOOTH,SMOOTH);
     printf("\t-v\t--verbose\tshow progress during search\n");
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
@@ -455,7 +468,7 @@ struct option long_options[] =
     {"speed"  ,   required_argument, 0, 's'},
 	{"add"    ,   required_argument, 0, 'a'},
 	{"center" ,   no_argument,       0, 'c'},
-	{"smooth" ,   required_argument, 0, 's'}, 
+	{"smooth" ,   required_argument, 0, 'm'}, 
     {"verbose",   no_argument,       0, 'v'},
     {"help"   ,   no_argument,       0, 'h'},
 	{"generations",   required_argument, 0, 'g'},
@@ -466,7 +479,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:cvhx:g:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cm:vhx:g:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -483,7 +496,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
 			case 'c':
 				CENTER = 1 ;
 				break ;
-			case 's':
+			case 'm':
 				SMOOTH = (int) atoi(optarg);
 				break ;
             case 'v':
