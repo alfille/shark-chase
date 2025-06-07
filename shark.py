@@ -24,7 +24,7 @@ class Series:
 		print( "\tData points: {}".format( len(self.t) ) )
 		print( "\tColumn 1 range {} to {}".format(min(self.t),max(self.t) ) )
 		print( "\tColumn 2 range {} to {}".format(min(self.r),max(self.r) ) )
-		print( "\tPath length {}",format(sum(self.segments)) )
+		print( "\tPath length {}".format(sum(self.segments)) )
 		
 	def calc_path( self ):
 		self.segments = [ math.sqrt( self.r[i]**2 + self.r[i-1]**2 - 2*self.r[i]*self.r[i-1]*math.cos(self.t[i]-self.t[i-1])  ) for i in range(1,len(self.t)) ]

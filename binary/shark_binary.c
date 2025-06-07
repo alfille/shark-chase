@@ -65,7 +65,7 @@ void Graph(struct trial * tr) ;
 double PENALTY_MULT = 1.0 ; // penalty multiplier
 char * add_text = NULL ; // for file names
 int PATH_POINTS = 100 ; // Number of points (plus 1 for endpoints)
-#define NO_PATH (PATH_POINTS + 1)
+#define NO_PATH (PATH_POINTS + 500)
 double SHARK_V = 4.0 ; // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
 int verbose = 0 ; // More progress reports
@@ -75,7 +75,7 @@ int GENS = 25 ; // Number of halving times for delta
 int SMOOTH = 0; // how far spread for smoothing
 
 #define Smooth_size ( 2*SMOOTH + 1 )
-#define Smooth_center ( SMOOTH+1 )
+#define Smooth_index(tr,i) ( i + SMOOTH - tr->index )
 
 double * Smoother = NULL ;
 
@@ -116,7 +116,7 @@ void allocate_arrays( void ) {
     if ( test_tr==NULL ) {
         exit(1) ;
     }
-    Smoother = (double *) malloc( (SMOOTH + 1) * sizeof( double ) ) ;
+    Smoother = (double *) malloc( Smooth_size * sizeof( double ) ) ;
     if ( Smoother==NULL ) {
         exit(1) ;
     }
@@ -134,10 +134,14 @@ void unallocate( void ) { // never called
 
 void initial_path( struct trial * tr ) {
 	// smoothing values
-	Smoother[0] = 1. ;
-	for ( int i = 1 ; i < SMOOTH ; ++i ) {
-		Smoother[i] = .5 * Smoother[i-1] ;
+	Smoother[SMOOTH] = 1. ;
+	for ( int i = 1 ; i <= SMOOTH ; ++i ) {
+		Smoother[SMOOTH-i] = Smoother[SMOOTH+i] = .5 * Smoother[SMOOTH+i-1] ;
 	}
+	for ( int i = 0 ; i < Smooth_size ; ++i ) {
+		printf( "%d -> %g \n",i,Smoother[i] ) ;
+	}
+	printf( " SMOOTH = %d\n",SMOOTH);
 	
 	// run straight to the edge
 	if ( CENTER ) {
@@ -160,7 +164,9 @@ void initial_path( struct trial * tr ) {
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 		angles[i] = 0. ;
 		segments[i] = radii[i] - radii[i-1] ;
+		//printf("(%d, %.2f, %.2f) ",i,angles[i],radii[i]);
 	}
+	//printf("\n");
 	
 	tr->index = NO_PATH ; // no index ;
 	tr->last_index = NO_PATH ;
@@ -172,34 +178,37 @@ void initial_path( struct trial * tr ) {
 void penalty_calc( struct trial * tr ) {
 	// also computes shark array
 	int transition = PATH_POINTS / SHARK_V ;
-	double s = SHARK_INIT_ANGLE ;
-	shark[0] = s ;
-	double p = 0 ; // penalty
+	shark[0] = SHARK_INIT_ANGLE ;
+	tr->penalty = 0. ; // penalty
 	// adjust everything after trial index
 	double incr = 0. ; // cumulative angle increment
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 		// adjusted angle and segment length
-		double l = segments[i] ;
-		int dist = abs( tr->index - i ) ;
-		if ( dist < SMOOTH ) {
-			incr += Smoother[ dist ] * tr-> delta ;
-			l = tr->adj_seg[i + SMOOTH - tr->index] ;
+		double l ;
+		if ( abs( tr->index - i ) <= SMOOTH ) {
+			incr += Smoother[ Smooth_index(tr,i) ] * tr-> delta ;
+			l =  tr->adj_seg[ Smooth_index(tr,i) ] ;
+			//printf(" index=%d, Sindex=%d, incr=%f, l=%f\n",i,Smooth_index(tr,i),incr,l);
 		} else {
 			l = segments[i] ;
 		}
 		
 		// Shark goes to man's angle upto max speed
-		double rem = remainder( angles[i] + incr - s , 2*M_PI) ; // corrected angular difference
+		double rem = remainder( angles[i] + incr - shark[i-1] , 2*M_PI) ; // corrected angular difference
 		double max_shark = l * SHARK_V ; // max distance can travel
-		s += (rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark ) ;
+		shark[i] = shark[i-1] + ((rem>=0) ? fmin( rem, max_shark ) : fmax( rem, -max_shark )) ;
+		//printf("%d rem=%g, max=%g shark%f->%f\n",i,rem,max_shark,shark[i-1],shark[i]);
 		if ( ( i > transition ) && ( fabs( rem ) < .001 ) ) {
 			// penalty
-			p += l + (i==PATH_POINTS) ;
+			tr->penalty += l + (i==PATH_POINTS) ;
 		}
 	}
 
-	tr->penalty = p ;
 	//printf("Penalty ");
+	//for ( int i = 0 ; i <= PATH_POINTS ; ++i ) {
+	//	printf("%.2f ",shark[i]);
+	//}
+	//printf("\n");
 	//Ptrial( tr ) ;
 }
 
@@ -220,10 +229,9 @@ void accept_trial( struct trial * tr ) {
 		double incr = 0. ; // cumulative angle increment
 		for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 			// adjusted angle and segment length
-			int dist = abs( tr->index - i ) ;
-			if ( dist < SMOOTH ) {
-				incr += Smoother[ dist ] * tr-> delta ;
-				segments[i] = tr->adj_seg[i + SMOOTH - tr->index] ;
+			if ( abs( tr->index - i ) <= SMOOTH ) {
+				incr += Smoother[ Smooth_index(tr,i) ] * tr-> delta ;
+				segments[i] = tr->adj_seg[ Smooth_index(tr,i) ] ;
 			}
 			angles[i] += incr ;
 		}
@@ -246,14 +254,16 @@ void perturb_calc( struct trial * tr ) {
 	for ( int i = i0 ; i <= i1 ; ++i ) {
 		double r = radii[i] ; 
 		double last_r = radii[i-1] ;
-		tr->adj_seg[i] = sqrt(
+		tr->adj_seg[ Smooth_index(tr,i) ] = sqrt(
 			r*r
 			+ last_r*last_r
-			- 2*r*last_r*cos( angles[i] + Smoother[ abs( i - tr->index ) ] * tr->delta - angles[i-1] )
+			- 2*r*last_r*cos( angles[i] + Smoother[ Smooth_index(tr,i) ] * tr->delta - angles[i-1] )
 			);
-		tr->length += tr->adj_seg[i] - segments[i] ; // update length
+		tr->length += tr->adj_seg[ Smooth_index(tr,i) ] - segments[i] ; // update length
 	}
 	tr->penalty = PENALTY_UNCALCULATED ; // penalty no longer accurate
+	//printf("Perturb ");
+	//Ptrial(tr);
 }			
 
 void copy_trial( struct trial * dest, struct trial * source ) {
