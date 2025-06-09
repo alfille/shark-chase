@@ -3,3 +3,7 @@ authors = []
 language = "en"
 multilingual = false
 src = "src"
+
+[output.html]
+mathjax-support = true
+default-theme = "dark"

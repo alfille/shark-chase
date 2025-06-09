@@ -1,0 +1,22 @@
+# Simplification
+
+![shark](shark.png)
+
+We know from the [previous section](theory.md) that we need to minimize:
+
+\\[L\_M=\int\_0\^{t\_{final}}v\_M\\,dt\\]
+
+The given constraints are difficult, so let make some simplifying assuptions:
+
+## The shark moves with constant maximum speed
+
+\\[v\_S=\dot\theta\_S=V\_{max}\quad\rightarrow\\quad\theta\_S=V\_{max}\times t - \pi\\]
+
+## The man moves at constant maximum speed
+
+\\[v\_M=1\quad\rightarrow\quad L\_M=t\_{final}\\]
+
+## The man never circles fast enough to reverse the shark
+
+\\[\theta\_S+\pi\ge\theta\_M\ge\theta\_S\\]
+
