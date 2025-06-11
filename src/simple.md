@@ -18,5 +18,10 @@ The given constraints are difficult, so let make some simplifying assuptions:
 
 ## The man never circles fast enough to reverse the shark
 
+Relaxed constraint
+
 \\[\theta\_S+\pi\ge\theta\_M\ge\theta\_S\\]
+\\[\rightarrow-\pi/2\le\theta\_M-\theta\_S-\pi/2\le\pi/2\\]
+\\[\rightarrow\lvert\theta\_M-\theta\_S-\pi/2\rvert\le\pi/2\\]
+
 

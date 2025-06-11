@@ -31,11 +31,8 @@ More generally, if the shark speed it \\(v\\) and the man runs to \\(\frac{1}{v}
 
 \\[1-\frac{1}{v}\lt\frac\{\pi}{v}\\]
 
-\\[v\lt\pi+1=4.1415...\\]
+\\[v\lt\pi+1\approx 4.142\\]
 
 ## Optimization
 
 The strategy works, but is it the most efficient?
-
-
-
