@@ -8,4 +8,8 @@
 - [Theoretical Solution](./theory.md)
   //- [Simplification](./simple.md)
   //- [Simplification continuedz](./simple2.md)
+- [Numerical](./numerical.md)
+  -[Programs](./programs.md)
+  -[Files](./files.md)
+  -[Display](./display)
 

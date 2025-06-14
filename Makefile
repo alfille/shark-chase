@@ -1,23 +1,15 @@
-TARGET = shark
-LIBS = -lgsl -lm
-CC = gcc
-CFLAGS = -g -Wall
+TARGETS = anneal binary
 
 .PHONY: default all clean
 
-default: $(TARGET)
-all: default
-
-OBJECTS := $(patsubst %.c, %.o, $(wildcard *.c))
-HEADERS := $(wildcard *.h)
-
-%.o :%.c $(HEADERS)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall -o $@ $(LIBS)
-
+default: all
+all:
+	@for dir in $(TARGETS); do \
+		$(MAKE) -C $$dir ; \
+	done
+	
 clean:
-	-rm -f *.o
-	-rm -f $(TARGET)
+	@for dir in $(TARGETS); do \
+		$(MAKE) -C $$dir clean ; \
+	done
 

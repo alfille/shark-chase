@@ -1,5 +1,5 @@
-TARGET = shark_binary
-LIBS = -lm
+TARGET = shark
+LIBS = -lgsl -lm
 CC = gcc
 CFLAGS = -g -Wall
 
