@@ -6,5 +6,6 @@
   - [Small Circle Solution](./circle.md)
   - [Play The Angles](./angles.md)
 - [Theoretical Solution](./theory.md)
-  - [Simplification](./simple.md)
+  //- [Simplification](./simple.md)
+  //- [Simplification continuedz](./simple2.md)
 
