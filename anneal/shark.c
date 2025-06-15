@@ -30,6 +30,8 @@ int PATH_POINTS = 100 ;
 
 int verbose = 0 ;
 int CENTER = 0 ; // concentrate points in center
+#define SIM_TYPE "anneal"
+int OUTPUT=0 ;
 
 /* Simulated Annealing Parameters */
 int N_TRIES= 10000 ; // points before stepping
@@ -195,9 +197,9 @@ void pass( gsl_rng * rng ) {
 void Graph(void) {
     char file_control[120] ;
     if ( add_text ) {
-		sprintf( file_control, "control%d_%s.gplot", PATH_POINTS, add_text ) ;
+		sprintf( file_control, "%s%d_%0.2f_%s.gplot", SIM_TYPE, PATH_POINTS, SHARK_V, add_text ) ;
 	} else {
-		sprintf( file_control, "control%d.gplot", PATH_POINTS ) ;
+		sprintf( file_control, "%s%d_%0.2f.gplot", SIM_TYPE, PATH_POINTS, SHARK_V ) ;
 	}
     FILE * fcontrol = fopen( file_control, "w" ) ;
     if ( fcontrol == NULL ) {
@@ -207,9 +209,9 @@ void Graph(void) {
     
     char file_data[120];
     if ( add_text ) {
-		sprintf( file_data,    "data%d_%s.dat",      PATH_POINTS, add_text ) ;
+		sprintf( file_data,    "%s%d_%0.2f_%s.dat", SIM_TYPE, PATH_POINTS, SHARK_V, add_text ) ;
 	} else {
-		sprintf( file_data,    "data%d.dat",      PATH_POINTS ) ;
+		sprintf( file_data,    "%s%d_%0.2f.dat", SIM_TYPE, PATH_POINTS, SHARK_V ) ;
 	}
     FILE * fdata = fopen( file_data, "w" ) ;
     if ( fdata == NULL ) {
@@ -219,6 +221,10 @@ void Graph(void) {
     }
 
     /* gnuplot commands */
+	if ( OUTPUT ) {
+		fprintf( fcontrol, "set terminal png\n" ) ;
+		fprintf( fcontrol, "set output \'%s%d_%0.2f.png\'\n",SIM_TYPE,PATH_POINTS,SHARK_V ) ;
+	}
     fprintf( fcontrol, "unset border\n" ) ;
     fprintf( fcontrol, "set polar\n" ) ;
     fprintf( fcontrol, "unset xtics\n" ) ;
@@ -232,7 +238,6 @@ void Graph(void) {
     fprintf( fcontrol, "set rtics (\"%.2f\" %.2f,\"%.2f\" %.2f 1,\"%.2f\" %.2f)\n",1./SHARK_V,1./SHARK_V,.5,.5,1.,1. ) ;
     fprintf( fcontrol, "set key autotitle columnheader\n" );
     fprintf( fcontrol, "plot for [i=0:1] \'%s\' using 1:2 index i with lines\n", file_data ) ;
-//    fprintf( fcontrol, "pause mouse\n" ) ;
     
     fclose( fcontrol ) ;
 
@@ -264,7 +269,7 @@ void Graph(void) {
     fclose( fdata ) ;
 
     char system_command[250] ;
-    sprintf( system_command, "gnuplot -p %s", file_control ); 
+    sprintf( system_command, "gnuplot %s %s", (OUTPUT?"-p":""), file_control ); 
     
     system(system_command);
 }
@@ -283,6 +288,7 @@ void help() {
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
     printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
     printf("\t-v\t--verbose\tshow progress during search\n");
+    printf("\t-o\t\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");
@@ -304,6 +310,7 @@ struct option long_options[] =
 	{"add"    ,   required_argument, 0, 'a'},
 	{"center" ,   no_argument,       0, 'c'},
     {"verbose",   no_argument,       0, 'v'},
+    {"output" ,   no_argument,       0, 'o'},
     {"help"   ,   no_argument,       0, 'h'},
     {"ntries" ,   required_argument, 0, 'n'},
     {"iterations" ,   required_argument, 0, 'i'},
@@ -319,7 +326,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:cvhx:n:i:m:K:u:t:z:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cvohx:n:i:m:K:u:t:z:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -339,6 +346,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
             case 'v':
                 verbose = 1 ;
                 break ;
+            case 'o':
+				OUTPUT = 1 ;
+				break ;
             case 'h':
                 help();
                 break ;

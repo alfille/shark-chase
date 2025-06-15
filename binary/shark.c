@@ -70,6 +70,8 @@ double SHARK_V = 4.0 ; // relative speed
 #define SHARK_INIT_ANGLE M_PI // opposite side
 int verbose = 0 ; // More progress reports
 int CENTER = 0 ; // concentrate points in center
+#define SIM_TYPE "binary"
+int OUTPUT=0 ;
 #define PENALTY_UNCALCULATED ( (double)-1.0 ) // Not yet calculated
 int GENS = 25 ; // Number of halving times for delta
 int SMOOTH = 0; // how far spread for smoothing
@@ -378,9 +380,9 @@ void run( void ) {
 void Graph(struct trial * tr) {
     char file_control[120] ;
     if ( add_text ) {
-		sprintf( file_control, "controlB%d_%s.gplot", PATH_POINTS, add_text ) ;
+		sprintf( file_control, "%s%d_%0.2f_%s.gplot", SIM_TYPE, PATH_POINTS, SHARK_V, add_text ) ;
 	} else {
-		sprintf( file_control, "controlB%d.gplot", PATH_POINTS ) ;
+		sprintf( file_control, "%s%d_%0.2f.gplot", SIM_TYPE, PATH_POINTS, SHARK_V ) ;
 	}
     FILE * fcontrol = fopen( file_control, "w" ) ;
     if ( fcontrol == NULL ) {
@@ -390,9 +392,9 @@ void Graph(struct trial * tr) {
     
     char file_data[120];
     if ( add_text ) {
-		sprintf( file_data,    "dataB%d_%s.dat",      PATH_POINTS, add_text ) ;
+		sprintf( file_data,    "%s%d_%0.2f_%s.dat", SIM_TYPE, PATH_POINTS, SHARK_V, add_text ) ;
 	} else {
-		sprintf( file_data,    "dataB%d.dat",      PATH_POINTS ) ;
+		sprintf( file_data,    "%s%d_%0.2f.dat", SIM_TYPE, PATH_POINTS, SHARK_V ) ;
 	}
     FILE * fdata = fopen( file_data, "w" ) ;
     if ( fdata == NULL ) {
@@ -402,6 +404,10 @@ void Graph(struct trial * tr) {
     }
 
     /* gnuplot commands */
+	if ( OUTPUT ) {
+		fprintf( fcontrol, "set terminal png\n" ) ;
+		fprintf( fcontrol, "set output \'%s%d_%0.2f.png\'\n",SIM_TYPE,PATH_POINTS,SHARK_V ) ;
+	}
     fprintf( fcontrol, "unset border\n" ) ;
     fprintf( fcontrol, "set polar\n" ) ;
     fprintf( fcontrol, "unset xtics\n" ) ;
@@ -444,7 +450,7 @@ void Graph(struct trial * tr) {
     fclose( fdata ) ;
 
     char system_command[250] ;
-    sprintf( system_command, "gnuplot -p %s", file_control ); 
+    sprintf( system_command, "gnuplot %s %s", (OUTPUT?"-p":""), file_control ); 
     
     system(system_command);
 }
@@ -464,6 +470,7 @@ void help() {
     printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
     printf("\t-m%d\t--smooth\t\tNumber of side elements to add to smoothing (default %d)\n",SMOOTH,SMOOTH);
     printf("\t-v\t--verbose\tshow progress during search\n");
+    printf("\t-o\t\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");
@@ -480,6 +487,7 @@ struct option long_options[] =
 	{"center" ,   no_argument,       0, 'c'},
 	{"smooth" ,   required_argument, 0, 'm'}, 
     {"verbose",   no_argument,       0, 'v'},
+    {"output" ,   no_argument,       0, 'o'},
     {"help"   ,   no_argument,       0, 'h'},
 	{"generations",   required_argument, 0, 'g'},
     {0        ,   0          ,       0,   0}
@@ -489,7 +497,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:cm:vhx:g:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cm:vohx:g:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -512,6 +520,9 @@ void ParseCommandLine( int argc, char * argv[] ) {
             case 'v':
                 verbose = 1 ;
                 break ;
+            case 'o':
+				OUTPUT = 1 ;
+				break ;
             case 'h':
                 help();
                 break ;

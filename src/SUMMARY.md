@@ -13,5 +13,5 @@
     - [Shark Test](./test.md)
     - [CSV file](./CSV_file.md)
   - [Files](./files.md)
-  - [Display](./display)
+  - [Display](./display.md)
 

@@ -29,3 +29,5 @@ Compare speed
                 min 3.9984627885042867
                 avg 3.999679481474318
 ```
+
+Either specify the ".dat" file on the command line, or a file choosing window will be shown.

@@ -19,7 +19,7 @@ HEADERS := $(wildcard *.h)
 $(TARGET): $(OBJECTS)
 	$(CC) $(OBJECTS) -Wall -o $@_$(DIR) $(LIBS)
 ifeq ($(MAKELEVEL),1)
-	cp $@_$(DIR) ..
+	cp -f $@_$(DIR) ..
 endif
 
 clean:
