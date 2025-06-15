@@ -8,6 +8,8 @@ CFLAGS = -g -Wall
 default: $(TARGET)
 all: default
 
+DIR := $(notdir $(CURDIR))
+
 OBJECTS := $(patsubst %.c, %.o, $(wildcard *.c))
 HEADERS := $(wildcard *.h)
 
@@ -15,10 +17,9 @@ HEADERS := $(wildcard *.h)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TARGET): $(OBJECTS)
-ifeq ($(MAKELEVEL),0)
-	$(CC) $(OBJECTS) -Wall -o $@ $(LIBS)
-else
-	$(CC) $(OBJECTS) -Wall -o ../$@ $(LIBS)
+	$(CC) $(OBJECTS) -Wall -o $@_$(DIR) $(LIBS)
+ifeq ($(MAKELEVEL),1)
+	cp $@_$(DIR) ..
 endif
 
 clean:
