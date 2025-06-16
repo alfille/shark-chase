@@ -76,8 +76,8 @@ int OUTPUT=0 ;
 int GENS = 25 ; // Number of halving times for delta
 int SMOOTH = 0; // how far spread for smoothing
 
-#define Smooth_size ( 2*SMOOTH + 1 )
-#define Smooth_index(tr,i) ( i + SMOOTH - tr->index )
+#define Smooth_size ( SMOOTH + 2 )
+#define Smooth_index(tr,i) ( tr->index - i )
 
 double * Smoother = NULL ;
 
@@ -135,13 +135,9 @@ void unallocate( void ) { // never called
 }
 
 void initial_path( struct trial * tr ) {
-	// smoothing values
-	Smoother[SMOOTH] = 1. ;
-	for ( int i = 1 ; i <= SMOOTH ; ++i ) {
-		Smoother[SMOOTH-i] = Smoother[SMOOTH+i] = .5 * Smoother[SMOOTH+i-1] ;
-	}
+	// smoothing values (actually the delta)
 	for ( int i = 0 ; i < Smooth_size ; ++i ) {
-		printf( "%d -> %g \n",i,Smoother[i] ) ;
+		Smoother[i] = 1.0 - ((double) i) / (SMOOTH+1) ;
 	}
 	printf( " SMOOTH = %d\n",SMOOTH);
 	
@@ -183,16 +179,19 @@ void penalty_calc( struct trial * tr ) {
 	shark[0] = SHARK_INIT_ANGLE ;
 	tr->penalty = 0. ; // penalty
 	// adjust everything after trial index
-	double incr = 0. ; // cumulative angle increment
 	for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
 		// adjusted angle and segment length
-		double l ;
-		if ( abs( tr->index - i ) <= SMOOTH ) {
-			incr += Smoother[ Smooth_index(tr,i) ] * tr-> delta ;
-			l =  tr->adj_seg[ Smooth_index(tr,i) ] ;
-			//printf(" index=%d, Sindex=%d, incr=%f, l=%f\n",i,Smooth_index(tr,i),incr,l);
-		} else {
+		double incr ; // angle increment
+		double l ; // actual segment length
+		if ( i > tr->index ) {
 			l = segments[i] ;
+			incr = tr->delta ;
+		} else if ( i < tr->index - SMOOTH ) {
+			l = segments[i] ;
+			incr = 0. ;
+		} else {
+			l = tr->adj_seg[ Smooth_index( tr, i ) ] ;
+			incr = Smoother[ Smooth_index( tr, i ) ] * tr-> delta ;
 		}
 		
 		// Shark goes to man's angle upto max speed
@@ -227,15 +226,19 @@ void accept_trial( struct trial * tr ) {
 	// perturbed version will now be baseline
 	// leaves delta and penalty unchanged
 	if ( tr->index != NO_PATH ) {
-	
-		double incr = 0. ; // cumulative angle increment
-		for ( int i = 1 ; i <= PATH_POINTS ; ++i ) {
-			// adjusted angle and segment length
-			if ( abs( tr->index - i ) <= SMOOTH ) {
-				incr += Smoother[ Smooth_index(tr,i) ] * tr-> delta ;
-				segments[i] = tr->adj_seg[ Smooth_index(tr,i) ] ;
+		int i0 = tr->index - SMOOTH ;
+		if ( i0 < 1 ) {
+			i0 = 1 ;
+		}
+		for ( int i = i0 ; i <= PATH_POINTS ; ++i ) {
+			if ( i > tr->index ) {
+				// past smoothing range
+				angles[i] += tr->delta ;
+			} else {
+				// in smoothing range
+				angles[i] += Smoother[ Smooth_index( tr, i ) ] * tr-> delta ;
+				segments[i] = tr->adj_seg[ Smooth_index( tr,i ) ] ;
 			}
-			angles[i] += incr ;
 		}
 	}
 
@@ -245,21 +248,16 @@ void accept_trial( struct trial * tr ) {
 void perturb_calc( struct trial * tr ) {
 	// use law of cosines to calculate segment length from altered angle
 	int i0 = tr->index - SMOOTH ;
-	int i1 = tr->index + SMOOTH ;
 	if ( i0 < 1 ) {
 		i0 = 1 ;
 	}
-	if ( i1 > PATH_POINTS ) {
-		i1 = PATH_POINTS ;
-	}
-
-	for ( int i = i0 ; i <= i1 ; ++i ) {
+	for ( int i = i0 ; i <= tr->index ; ++i ) {
 		double r = radii[i] ; 
 		double last_r = radii[i-1] ;
 		tr->adj_seg[ Smooth_index(tr,i) ] = sqrt(
 			r*r
 			+ last_r*last_r
-			- 2*r*last_r*cos( angles[i] + Smoother[ Smooth_index(tr,i) ] * tr->delta - angles[i-1] )
+			- 2*r*last_r*cos( angles[i] - angles[i-1] + ( Smoother[ Smooth_index(tr,i) ] - Smoother[ Smooth_index( tr,i-1 )] ) * tr->delta )
 			);
 		tr->length += tr->adj_seg[ Smooth_index(tr,i) ] - segments[i] ; // update length
 	}
