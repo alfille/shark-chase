@@ -10,6 +10,8 @@
   //- [Simplification continuedz](./simple2.md)
 - [Numerical](./numerical.md)
   - [Programs](./programs.md)
+    - [Simulated Annealing](./shark_anneal.md)
+    - [Binary Search](./shark_binary.md)
     - [Shark Test](./test.md)
     - [CSV file](./CSV_file.md)
   - [Files](./files.md)

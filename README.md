@@ -19,17 +19,10 @@ Suppose the island radius is 1 unit. Running straight away from the shark's star
 
 So you need to be more clever!
 
-------
-# Spoiler ahead
-### Perhaps you will want to think it through first?
-------------
-### [NEXT](README2.md)
+## Dive in!
 
-* [Puzzle posed](README.md)
-* [Naive solution](README2.md) <- NEXT
-* [Computing strategy](README3.md)
-* [The program](README4.md)
-* [Solution results](README5.md)
+[Full Writeup, design and results!](https://alfille.github.io/shark-chase/)
+
 -----------
 by Paul H Alfille 2025
 [on Github](https://github.com/alfille/shark-chase)

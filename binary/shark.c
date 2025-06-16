@@ -467,10 +467,10 @@ void help() {
     printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
-    printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
-    printf("\t-m%d\t--smooth\t\tNumber of side elements to add to smoothing (default %d)\n",SMOOTH,SMOOTH);
+    printf("\t-c\t--center\tConcentrate points in the center (1/v central radius\n");
+    printf("\t-m%d\t--smooth\tNumber of side elements to add to smoothing (default %d)\n",SMOOTH,SMOOTH);
     printf("\t-v\t--verbose\tshow progress during search\n");
-    printf("\t-o\t\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
+    printf("\t-o\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");

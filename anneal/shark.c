@@ -58,6 +58,22 @@ struct point {
 // for file names
 char * add_text = NULL ;
 
+/* Function prototypes */
+/* GSL functions */
+double Energy( void * xp ) ;
+double Metric( void * xp , void * yp ) ;
+void Step( const gsl_rng * rng, void * xp, double step_size ) ;
+void Print( void * xp ) ;
+
+/* Other prototypes */
+void initial_path( void ) ;
+double Calculation( void * xp, double * penalty ) ;
+void Graph(void) ;
+void ParseCommandLine( int argc, char * argv[] ) ;
+void help() ;
+void run( gsl_rng * rng ) ;
+int main( int argc, char ** argv ) ;
+
 // man_pos array -- straight run to the beach
 void initial_path( void ) {
     man_pos = (struct point *) calloc( PATH_POINTS + 1, sizeof( struct point ) ) ; 
@@ -165,7 +181,7 @@ void Print( void * xp ) {
     }
 }
 
-void pass( gsl_rng * rng ) {
+void run( gsl_rng * rng ) {
     gsl_siman_params_t params = {
         N_TRIES, 
         ITERS_FIXED_T, 
@@ -286,9 +302,9 @@ void help() {
     printf("\t-p%d\t--path\t\tnumber of steps (default %d)\n",PATH_POINTS,PATH_POINTS);    
     printf("\t-s%g\t--speed\t\tShark speed (default %g)\n",SHARK_V,SHARK_V);
     printf("\t-atext\t--add\t\tAdd text to end of control and data file names\n");    
-    printf("\t-c\t--center\t\tConcentrate points in the center (1/v central radius\n");
+    printf("\t-c\t--center\tConcentrate points in the center (1/v central radius\n");
     printf("\t-v\t--verbose\tshow progress during search\n");
-    printf("\t-o\t\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
+    printf("\t-o\t--output\tSave to file in format %s*.png\n",SIM_TYPE);
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");
@@ -406,7 +422,7 @@ int main( int argc, char ** argv ) {
     if ( verbose==0 ) {
         printf("\tcalculating -- may take a while\n");
     }
-    pass(rng) ;
+    run(rng) ;
     Graph() ;
     
     return 0 ;
