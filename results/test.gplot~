@@ -1,0 +1,16 @@
+filenames = "anneal1000_3.80.dat anneal1000_3.90.dat anneal1000_4.00.dat anneal1000_4.10.dat anneal1000_4.20.dat anneal1000_4.30.dat"
+set terminal png
+set output 'test.png'
+unset border
+set polar
+unset xtics
+unset ytics
+unset raxis
+set ttics axis
+set rtics axis
+set grid polar
+set size square
+set rrange [0:1.500000]
+set rtics ("0.26" 0.26,"0.50" 0.50 1,"1.00" 1.00)
+set key autotitle columnheader
+plot for [file in filenames] for [i=0:1] file  using 1:2 index i with lines
