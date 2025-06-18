@@ -16,4 +16,4 @@ set size square
 set rrange [0:1.500000]
 set rtics ("0.26" 0.26,"0.50" 0.50 1,"1.00" 1.00)
 set key autotitle columnheader
-plot for [speed in speeds] for [i=0:1] sim_type.points."_".speed.".dat"  using 1:2 index i title speed with lines
+plot for [speed in speeds] for [i=0:1] sim_type.points."_".speed.".dat"  using 1:2 index i title (i&1)?"":speed with lines
