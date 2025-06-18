@@ -86,9 +86,14 @@ class Graph:
 				("All files","*.*"),)
 				)
 			root.destroy()
-		print( self.dat_names ) 
-		print( len(self.dat_names) ) 
+
+	def write( self, process ):
+		process.stdin.write()
+		process.stdin.close()
 		
+	def run( self ):
+		process = subprocess.Popen( "gnuplot -p -" , stdin=subprocess.PIPE, text=True )
+		this.write( process )
 
 		
 def main( sysargs ):
