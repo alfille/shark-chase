@@ -402,9 +402,22 @@ void Graph(struct trial * tr) {
     }
 
     /* gnuplot commands */
+    fprintf( fcontrol, "sim_type = \"%s\"\n",SIM_TYPE ) ;
+    fprintf( fcontrol, "segments = \"%d\"\n",PATH_POINTS ) ;
+    fprintf( fcontrol, "speed = \"%.2f\"\n",SHARK_V ) ;
+    if ( add_text ) {
+		fprintf( fcontrol, "add_text = \"_%s\"\n",add_text ) ;
+	} else {
+		fprintf( fcontrol, "add_text = \"\"\n" ) ;
+    }
+    
 	if ( OUTPUT ) {
 		fprintf( fcontrol, "set terminal png\n" ) ;
-		fprintf( fcontrol, "set output \'%s%d_%0.2f.png\'\n",SIM_TYPE,PATH_POINTS,SHARK_V ) ;
+		if ( add_text ) {
+			fprintf( fcontrol, "set output \'%s%d_%0.2f_%s.png\'\n",SIM_TYPE,PATH_POINTS,SHARK_V,add_text ) ;
+		} else {
+			fprintf( fcontrol, "set output \'%s%d_%0.2f.png\'\n",SIM_TYPE,PATH_POINTS,SHARK_V ) ;
+		}
 	}
     fprintf( fcontrol, "unset border\n" ) ;
     fprintf( fcontrol, "set polar\n" ) ;
@@ -415,11 +428,12 @@ void Graph(struct trial * tr) {
     fprintf( fcontrol, "set rtics axis\n" ) ;
     fprintf( fcontrol, "set grid polar\n" ) ;
     fprintf( fcontrol, "set size square\n" ) ;
+    fprintf( fcontrol, "tt = sim_type.\": speed=\".speed\n" ) ;
+    fprintf( fcontrol, "set title tt\n" ) ;
     fprintf( fcontrol, "set rrange [0:%f]\n", SHARK_RADIUS ) ;
     fprintf( fcontrol, "set rtics (\"%.2f\" %.2f,\"%.2f\" %.2f 1,\"%.2f\" %.2f)\n",1./SHARK_V,1./SHARK_V,.5,.5,1.,1. ) ;
     fprintf( fcontrol, "set key autotitle columnheader\n" );
     fprintf( fcontrol, "plot for [i=0:1] \'%s\' using 1:2 index i with lines\n", file_data ) ;
-//    fprintf( fcontrol, "pause mouse\n" ) ;
     
     fclose( fcontrol ) ;
 
