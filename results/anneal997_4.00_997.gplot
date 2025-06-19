@@ -1,0 +1,19 @@
+sim_type = "anneal"
+segments = "997"
+speed = "4.00"
+add_text = "_997"
+unset border
+set polar
+unset xtics
+unset ytics
+unset raxis
+set ttics axis
+set rtics axis
+set grid polar
+set size square
+tt = sim_type.": speed=".speed
+set title tt
+set rrange [0:1.500000]
+set rtics ("0.25" 0.25,"0.50" 0.50 1,"1.00" 1.00)
+set key autotitle columnheader
+plot for [i=0:1] 'anneal997_4.00_997.dat' using 1:2 index i with lines

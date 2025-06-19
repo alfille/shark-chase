@@ -12,64 +12,6 @@ import sys
 import math
 import io
 
-class Series:
-	def __init__( self, series ):
-		lines = series.strip().split("\n")
-		self.title = lines[0] 
-		self.t = [ float((xx.split())[0]) for xx in lines[1:] ]
-		self.r = [ min(1.0,float((xx.split())[1])) for xx in lines[1:] ]
-		self.calc_path()
-		
-
-	def info( self ) :
-		print( "Series: {}".format(self.title) )
-		print( "\tData points: {}".format( len(self.t) ) )
-		print( "\tColumn 1 range {} to {}".format(min(self.t),max(self.t) ) )
-		print( "\tColumn 2 range {} to {}".format(min(self.r),max(self.r) ) )
-		print( "\tPath length {}".format(sum(self.segments)) )
-		
-	def calc_path( self ):
-		self.segments = [ math.sqrt( self.r[i]**2 + self.r[i-1]**2 - 2*self.r[i]*self.r[i-1]*math.cos(self.t[i]-self.t[i-1])  ) for i in range(1,len(self.t)) ]
-
-class Analyze:
-	def __init__( self, man, shark ):
-		self.man = man
-		self.shark = shark
-		self.v = [ shark.segments[i]/man.segments[i] for i in range(0,len(man.segments)) ]
-		
-	def info( self ):
-		print("Compare speed")
-		print("\tMan: {}".format(self.man.title) ) 
-		print("\tShark: {}".format(self.shark.title) )
-		print("\tSpeed:")  
-		print("\t\tmax {}".format(max(self.v)))  
-		print("\t\tmin {}".format(min(self.v)))  
-		print("\t\tavg {}".format(sum(self.shark.segments)/sum(self.man.segments)))  
-
-def dat_slurp(dat_name=""):
-	# Possibly request file (if not specified on command line) and read it in
-	
-	if dat_name == "":
-		# Use Tk file dialog
-		root = tk.Tk()
-		root.withdraw()
-		dat_name = filedialog.askopenfilename(title="Enter the DAT file to parse:",filetypes=(
-			("dat files","*.dat"),
-			("DAT files","*.DAT"),
-			("Text file","*.txt"),
-			("Text file","*.TXT"),
-			("All files","*"),
-			("All files","*.*"),)
-			)
-		root.destroy()
-
-	try: 
-		with open(dat_name,"r") as dat:
-			return dat.read()
-	except:
-		print(f"Unable to read {dat_name}\n") 
-		sys.exit(1)
-
 class Graph:
 	def __init__( self, dat_names="" ):
 		self.dat_names = dat_names ;
@@ -87,22 +29,50 @@ class Graph:
 				)
 			root.destroy()
 
+	def sim_type( self ) :
+		return self.dat_names[0].split("/")[-1].split("_")[0]
+		
+	def plotfile( self, filename, index ):
+		key = ".".join(filename.split("/")[-1].split(".")[:-1]).split("_",1)[-1].replace("_",":")
+		color = "#{:02x}{:02x}{:02x}".format(0xFF-index*15,(index&6) * 16,index*8)
+		return "\"{}\" using 1:2 index 0 title \"{}\" with lines lc rgb \"{}\", \"{}\" using 1:2 index 1 title \"{}\" with lines lc rgb \"{}\", ".format(filename,key,color,filename,"",color)
+
 	def write( self, process ):
-		process.stdin.write()
+		process.stdin.write("unset border\n")
+		process.stdin.write("set polar\n")
+		process.stdin.write("unset xtics\n")
+		process.stdin.write("unset ytics\n")
+		process.stdin.write("unset rtics\n")
+		process.stdin.write("set ttics axis\n")
+		process.stdin.write("set rtics axis\n")
+		process.stdin.write("set title \"{}\"\n".format(self.sim_type()))
+		process.stdin.write("set grid polar\n")
+		process.stdin.write("set size square\n")
+		process.stdin.write("set key outside\n")
+		process.stdin.write("set rrange [0:1.500000]\n")
+		process.stdin.write("set rtics ('0.25' 0.25, '0.50' 0.50, '1.00' 1.00)\n")
+		process.stdin.write("set key autotitle columnheader\n")
+		process.stdin.write("plot ")
+		index = 0
+		for f in self.dat_names:
+			process.stdin.write(self.plotfile( f, index&15 ))
+			index += 1
+		process.stdin.write("1\n")
+#plot for [speed in speeds] for [i=0:1] sim_type.points."_".speed.".dat"  using 1:2 index i title (i&1)?"":speed with lines ; print 3
 		process.stdin.close()
 		
 	def run( self ):
-		process = subprocess.Popen( "gnuplot -p -" , stdin=subprocess.PIPE, text=True )
-		this.write( process )
+		process = subprocess.Popen( ["gnuplot", "-p", "-"] , stdin=subprocess.PIPE, text=True )
+		self.write( process )
 
 		
 def main( sysargs ):
 	if len(sysargs) > 1:
-		dat_names = Graph(sysargs[1])
+		graph = Graph(sysargs[1])
 	else :
-		dat_names = Graph()
-
-	print(dat_names)
+		graph = Graph()
+	graph.run()
+	
 
 
 if __name__ == "__main__":

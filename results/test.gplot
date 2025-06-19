@@ -1,6 +1,6 @@
 sim_type = "anneal"
 points = "1000"
-speeds = "3.80 3.90 4.00 4.10 4.20 4.30 4.40"
+speeds = "3.30 3.40 3.50 3.60 3.70 3.80 3.90 4.00 4.10 4.20 4.30 4.40"
 #set terminal png
 #set output 'test.png'
 unset border
@@ -13,7 +13,8 @@ set rtics axis
 set title sim_type
 set grid polar
 set size square
+set key outside
 set rrange [0:1.500000]
 set rtics ("0.26" 0.26,"0.50" 0.50 1,"1.00" 1.00)
 set key autotitle columnheader
-plot for [speed in speeds] for [i=0:1] sim_type.points."_".speed.".dat"  using 1:2 index i title speed with lines
+plot for [speed in speeds] for [i=0:1] sim_type.points."_".speed.".dat"  using 1:2 index i title (i&1)?"":speed with lines ; print 3

@@ -16,4 +16,7 @@
     - [CSV file](./CSV_file.md)
   - [Files](./files.md)
   - [Display](./display.md)
-
+- [Anneal Solutions](./solutions.md)
+  - [Vary Speed](./aspeed.md)
+  - [Vary resolution](./aresolution.md)
+  - [Limiting Speed](./alimit.md)

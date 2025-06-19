@@ -33,7 +33,7 @@ class Analyze:
 	def __init__( self, man, shark ):
 		self.man = man
 		self.shark = shark
-		self.v = [ shark.segments[i]/man.segments[i] for i in range(0,len(man.segments)) ]
+		self.v = [ shark.segments[i]/man.segments[i] for i in range(len(man.segments)) ]
 		
 	def info( self ):
 		print("Compare speed")

@@ -323,7 +323,7 @@ void help() {
     printf("\t-h\t--help\t\tthis help\n");
     printf("\n");
     printf("Obscure options\n");
-    printf("\t-x%g\t--penalty\tPenalty multiplier (default %g)",PENALTY_MULT,PENALTY_MULT);
+    printf("\t-x%g\t--penalty\tPenalty multiplier (default %g)\n",PENALTY_MULT,PENALTY_MULT);
     printf("\t-n%d\t--ntries\tPoints before stepping (default %d)\n",N_TRIES,N_TRIES);
     printf("\t-i%d\t--iterations\tIterations at each temperature (default %d)\n",ITERS_FIXED_T,ITERS_FIXED_T);
     printf("\t-m%g\t--multiplier\tMultiplier for pertubation (default %g)\n",STEP_MULTIPLIER,STEP_MULTIPLIER);
