@@ -42,7 +42,8 @@ class Analyze:
 		print("\tSpeed:")  
 		print("\t\tmax {}".format(max(self.v)))  
 		print("\t\tmin {}".format(min(self.v)))  
-		print("\t\tavg {}".format(sum(self.shark.segments)/sum(self.man.segments)))  
+		print("\t\tavg {}".format(sum(self.shark.segments)/sum(self.man.segments)))
+		print("Eaten? {}".format(("No","Yes")[self.shark.t[-1]==self.man.t[-1]]))
 
 def dat_slurp(dat_name=""):
 	# Possibly request file (if not specified on command line) and read it in
