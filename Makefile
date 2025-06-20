@@ -1,4 +1,4 @@
-TARGETS = anneal binary
+TARGETS = anneal binary binary2
 
 .PHONY: default all clean
 
