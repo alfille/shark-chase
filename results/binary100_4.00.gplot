@@ -1,5 +1,5 @@
 sim_type = "binary"
-segments = "1000"
+segments = "100"
 speed = "4.00"
 add_text = ""
 unset border
@@ -16,4 +16,4 @@ set title tt
 set rrange [0:1.500000]
 set rtics ("0.25" 0.25,"0.50" 0.50 1,"1.00" 1.00)
 set key autotitle columnheader
-plot for [i=0:1] 'binary1000_4.00.dat' using 1:2 index i with lines
+plot for [i=0:1] 'binary100_4.00.dat' using 1:2 index i with lines

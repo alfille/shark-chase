@@ -74,6 +74,7 @@ int CENTER = 0 ; // concentrate points in center
 int OUTPUT=0 ;
 #define PENALTY_UNCALCULATED ( (double)-1.0 ) // Not yet calculated
 int GENS = 25 ; // Number of halving times for delta
+double HALVE = .5 ; // multiple for binary
 int SMOOTH = 0; // how far spread for smoothing
 
 #define Smooth_size ( SMOOTH + 2 )
@@ -331,30 +332,31 @@ enum perturb_result test_delta( struct trial * tr ) {
 
 void iterate_delta( struct trial * tr ) {
 	int halve = 0 ;
-	while ( halve < GENS ) {
+	int adjust_gens = (- GENS / log2(HALVE)) + .5 ;
+	while ( halve < adjust_gens ) {
 		switch ( test_delta( tr ) ) {
 			case no_change:
-				tr->delta *= .5 ;
+				tr->delta *= HALVE ;
 				++ halve ;
 				if ( verbose ) {
-					printf( "Generation %d ",halve ) ;
+					printf( "Generation %d stable",halve ) ;
 					Ptrial( tr ) ;
 				}
 				break ;
 			case first_change:
-				break ;
-			case second_change:
-				tr->delta *= 2 ;
-				-- halve ;
 				if ( verbose ) {
-					printf( "Generation %d ",halve ) ;
+					printf( "Generation %d decrease",halve ) ;
 					Ptrial( tr ) ;
 				}
 				break ;
-		}
-		if ( verbose ) {
-			printf( "Generation %d delta=%g",halve,tr->delta ) ;
-			Ptrial( tr ) ;
+			case second_change:
+				tr->delta /= HALVE ;
+				-- halve ;
+				if ( verbose ) {
+					printf( "Generation %d increase",halve ) ;
+					Ptrial( tr ) ;
+				}
+				break ;
 		}
 	}
 }
@@ -462,7 +464,7 @@ void Graph(struct trial * tr) {
     fclose( fdata ) ;
 
     char system_command[250] ;
-    sprintf( system_command, "gnuplot %s %s", (OUTPUT?"-p":""), file_control ); 
+    sprintf( system_command, "gnuplot %s %s", (OUTPUT?"":"-p"), file_control ); 
     
     system(system_command);
 }
@@ -488,6 +490,7 @@ void help() {
     printf("Obscure options\n");
     printf("\t-x%g\t--penalty\tPenalty multiplier (default %g)\n",PENALTY_MULT,PENALTY_MULT);
     printf("\t-g%d\t--generations\tNumber of halving error delta (default (%d)\n",GENS,GENS);
+    printf("\t-z%g\t--multiplier\tFactor decreasing pertubation (default (%g)\n",HALVE,HALVE);
     exit(1);
 }
 
@@ -501,7 +504,8 @@ struct option long_options[] =
     {"verbose",   no_argument,       0, 'v'},
     {"output" ,   no_argument,       0, 'o'},
     {"help"   ,   no_argument,       0, 'h'},
-	{"generations",   required_argument, 0, 'g'},
+	{"generations",  required_argument, 0, 'g'},
+	{"multiplier",   required_argument, 0, 'z'},
     {0        ,   0          ,       0,   0}
 };
 
@@ -509,7 +513,7 @@ void ParseCommandLine( int argc, char * argv[] ) {
     // Parse command line
     int c;
     int option_index ;
-    while ( (c = getopt_long( argc, argv, "p:s:a:cm:vohx:g:", long_options, &option_index )) != -1 ) {
+    while ( (c = getopt_long( argc, argv, "p:s:a:cm:vohx:g:z:", long_options, &option_index )) != -1 ) {
         //printf("opt=%c, index=%d, val=%s\n",c,option_index, long_options[option_index].name);
         switch (c) {
             case 0:
@@ -538,12 +542,15 @@ void ParseCommandLine( int argc, char * argv[] ) {
             case 'h':
                 help();
                 break ;
-             case 'x':
+			case 'x':
                 PENALTY_MULT = (double) atof(optarg) ;
                 break ;
-             case 'g':
+			case 'g':
                 GENS = (int) atoi(optarg) ;
                 break ;
+			case 'z':
+				HALVE = (double) atof(optarg) ;
+				break ;
             default:
                 help() ;
                 break ;
