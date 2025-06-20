@@ -27,3 +27,7 @@ In these cases, it seems that the abrupt changes are seen at start and end, not 
 Should have no bearing if a solution is findable, but test:
 
 ![binary_penalty](binary_penalty.png)
+
+In contrast, the Simulated Annealling is insensitive to the penalty multiple:
+
+![anneal_penalty](anneal_penalty.png)
